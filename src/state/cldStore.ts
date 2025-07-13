@@ -1,4 +1,4 @@
-import { StateCreator, StoreApi, UseBoundStore, create } from 'zustand';
+import { StoreApi, UseBoundStore, create } from 'zustand';
 
 export type NodeType = {
   id: string;
@@ -31,6 +31,10 @@ export type CLDState = {
   future: { nodes: NodeType[]; arcs: ArcType[] }[];
   nodeCounter: number;
   arcCounter: number;
+  defaultNodeColor: string;
+  defaultArcColor: string;
+  setDefaultNodeColor: (color: string) => void;
+  setDefaultArcColor: (color: string) => void;
   addNode: (x: number, y: number) => void;
   moveNode: (id: string, x: number, y: number) => void;
   addArc: (from: string, to: string) => void;
@@ -53,12 +57,16 @@ export const useCLDStore: UseBoundStore<StoreApi<CLDState>> = create<CLDState>(
     future: [],
     nodeCounter: 1,
     arcCounter: 1,
+    defaultNodeColor: '#222',
+    defaultArcColor: '#888',
+    setDefaultNodeColor: (color: string) => set({ defaultNodeColor: color }),
+    setDefaultArcColor: (color: string) => set({ defaultArcColor: color }),
     addNode: (x, y) => {
       const id = get().nodeCounter.toString();
       set(state => ({
         history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
         future: [],
-        nodes: [...state.nodes, { id, x, y, label: 'Variable', color: '#222' }],
+        nodes: [...state.nodes, { id, x, y, label: 'Variable', color: get().defaultNodeColor }],
         nodeCounter: state.nodeCounter + 1,
       }));
     },
@@ -71,7 +79,7 @@ export const useCLDStore: UseBoundStore<StoreApi<CLDState>> = create<CLDState>(
     },
     addArc: (from, to) => {
       const id = get().arcCounter.toString();
-      const arc: ArcType = { id, from, to, sign: '+', color: '#888', curvature: 40, sweepFlag: 0 };
+      const arc: ArcType = { id, from, to, sign: '+', color: get().defaultArcColor, curvature: 40, sweepFlag: 0 };
       set(state => ({
         history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
         future: [],
