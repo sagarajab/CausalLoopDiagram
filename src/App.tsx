@@ -22,48 +22,82 @@ const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
   return (
     <div style={{ padding: 32 }}>
       <h2>Analysis</h2>
-      <h3>Node Summary</h3>
-      <table style={{ borderCollapse: 'collapse', minWidth: 400, marginBottom: 32 }}>
-        <thead>
-          <tr>
-            <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>ID</th>
-            <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>Name</th>
-            <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}># Input</th>
-            <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}># Output</th>
-          </tr>
-        </thead>
-        <tbody>
-          {nodeStats.map(node => (
-            <tr key={node.id}>
-              <td style={{ border: '1px solid #bbb', padding: '6px 16px' }}>{node.id}</td>
-              <td style={{ border: '1px solid #bbb', padding: '6px 16px' }}>{node.label}</td>
-              <td style={{ border: '1px solid #bbb', padding: '6px 16px', textAlign: 'center' }}>{node.numInput}</td>
-              <td style={{ border: '1px solid #bbb', padding: '6px 16px', textAlign: 'center' }}>{node.numOutput}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <h3>Connections</h3>
-      <table style={{ borderCollapse: 'collapse', minWidth: 400 }}>
-        <thead>
-          <tr>
-            <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>ID</th>
-            <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>From Node</th>
-            <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>To Node</th>
-            <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>Sign</th>
-          </tr>
-        </thead>
-        <tbody>
-          {arcs.map(arc => (
-            <tr key={arc.id}>
-              <td style={{ border: '1px solid #bbb', padding: '6px 16px' }}>{arc.id}</td>
-              <td style={{ border: '1px solid #bbb', padding: '6px 16px' }}>{`${getNodeLabel(arc.from)} (${arc.from})`}</td>
-              <td style={{ border: '1px solid #bbb', padding: '6px 16px' }}>{`${getNodeLabel(arc.to)} (${arc.to})`}</td>
-              <td style={{ border: '1px solid #bbb', padding: '6px 16px', textAlign: 'center', fontWeight: 'bold', color: arc.sign === '+' ? '#388e3c' : '#d32f2f' }}>{arc.sign}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 32 }}>
+        <div style={{ minWidth: 420, flex: '0 0 auto' }}>
+          <h3>Node Summary</h3>
+          <table style={{ borderCollapse: 'collapse', minWidth: 400, marginBottom: 32 }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>ID</th>
+                <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>Name</th>
+                <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}># Input</th>
+                <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}># Output</th>
+              </tr>
+            </thead>
+            <tbody>
+              {nodeStats.map(node => (
+                <tr key={node.id}>
+                  <td style={{ border: '1px solid #bbb', padding: '6px 16px' }}>{node.id}</td>
+                  <td style={{ border: '1px solid #bbb', padding: '6px 16px' }}>{node.label}</td>
+                  <td style={{ border: '1px solid #bbb', padding: '6px 16px', textAlign: 'center' }}>{node.numInput}</td>
+                  <td style={{ border: '1px solid #bbb', padding: '6px 16px', textAlign: 'center' }}>{node.numOutput}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <h3>Connections</h3>
+          <table style={{ borderCollapse: 'collapse', minWidth: 400 }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>ID</th>
+                <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>From Node</th>
+                <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>Sign</th>
+                <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5' }}>To Node</th>
+              </tr>
+            </thead>
+            <tbody>
+              {arcs.map(arc => (
+                <tr key={arc.id}>
+                  <td style={{ border: '1px solid #bbb', padding: '6px 16px' }}>{arc.id}</td>
+                  <td style={{ border: '1px solid #bbb', padding: '6px 16px' }}>{`${getNodeLabel(arc.from)} (${arc.from})`}</td>
+                  <td style={{ border: '1px solid #bbb', padding: '6px 16px', textAlign: 'center', fontWeight: 'bold', color: arc.sign === '+' ? '#388e3c' : '#d32f2f' }}>{arc.sign}</td>
+                  <td style={{ border: '1px solid #bbb', padding: '6px 16px' }}>{`${getNodeLabel(arc.to)} (${arc.to})`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Vertical divider */}
+        <div style={{ width: 1, background: '#eee', alignSelf: 'stretch', margin: '0 8px' }} />
+        <div style={{ minWidth: 400, flex: '1 1 0' }}>
+          <h3>Adjacency Matrix</h3>
+          <table style={{ borderCollapse: 'collapse', minWidth: 400 }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #bbb', padding: '6px 12px', background: '#f5f5f5' }}></th>
+                {nodes.map(colNode => (
+                  <th key={colNode.id} style={{ border: '1px solid #bbb', padding: '6px 12px', background: '#f5f5f5', textAlign: 'center' }}>{getNodeLabel(colNode.id)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {nodes.map(rowNode => (
+                <tr key={rowNode.id}>
+                  <th style={{ border: '1px solid #bbb', padding: '6px 12px', background: '#f5f5f5', textAlign: 'right' }}>{getNodeLabel(rowNode.id)}</th>
+                  {nodes.map(colNode => {
+                    const arc = arcs.find(a => a.from === rowNode.id && a.to === colNode.id);
+                    return (
+                      <td key={colNode.id} style={{ border: '1px solid #bbb', padding: '6px 12px', textAlign: 'center', fontWeight: 'bold', color: arc?.sign === '+' ? '#388e3c' : arc?.sign === '-' ? '#d32f2f' : '#888' }}>
+                        {arc ? arc.sign : ''}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
@@ -85,6 +119,7 @@ const App: React.FC = () => {
   const [arcMenuOpen, setArcMenuOpen] = useState(false);
   const nodeBtnRef = React.useRef<HTMLDivElement>(null);
   const arcBtnRef = React.useRef<HTMLDivElement>(null);
+  const arcDragStart = React.useRef<null | { arcId: string, mx: number, my: number, nx: number, ny: number, sign: number }>(null);
 
   const handleRefresh = () => {
     setRefreshKey(k => k + 1);
@@ -137,12 +172,52 @@ const App: React.FC = () => {
   return (
     <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column' }}>
       {/* Menu bar */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', borderBottom: '1px solid #ddd', background: '#f0f4f8', position: 'relative' }}>
-        <button onClick={undo} title="Undo" style={menuBtnStyle}><FaUndo size={22} /></button>
-        <button onClick={redo} title="Redo" style={menuBtnStyle}><FaRedo size={22} /></button>
-        <button onClick={handleLoad} title="Load" style={menuBtnStyle}><FaFileImport size={22} /></button>
-        <button onClick={handleExport} title="Export" style={menuBtnStyle}><FaFileExport size={22} /></button>
-        <button onClick={handleRefresh} title="Sync" style={menuBtnStyle}><FaSync size={22} /></button>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', borderBottom: '1px solid #ddd', background: '#fff', position: 'relative' }}>
+        <button
+          onClick={undo}
+          title="Undo"
+          style={menuBtnStyle}
+          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+        ><FaUndo size={22} /></button>
+        <button
+          onClick={redo}
+          title="Redo"
+          style={menuBtnStyle}
+          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+        ><FaRedo size={22} /></button>
+        <button
+          onClick={handleLoad}
+          title="Load"
+          style={menuBtnStyle}
+          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+        ><FaFileImport size={22} /></button>
+        <button
+          onClick={handleExport}
+          title="Export"
+          style={menuBtnStyle}
+          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+        ><FaFileExport size={22} /></button>
+        <button
+          onClick={handleRefresh}
+          title="Sync"
+          style={menuBtnStyle}
+          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+        ><FaSync size={22} /></button>
         {/* Default node color split button */}
         <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'row', alignItems: 'flex-end', verticalAlign: 'top' }} ref={nodeBtnRef}>
           <button
@@ -165,6 +240,7 @@ const App: React.FC = () => {
               background: '#fff',
               width: 36,
               height: 36,
+              transition: 'background 0.15s, box-shadow 0.15s',
             }}
             disabled={!selection.nodeId}
             onClick={() => {
@@ -175,6 +251,20 @@ const App: React.FC = () => {
                   future: [],
                 }));
               }
+            }}
+            onMouseOver={e => {
+              if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
+              if (selection.nodeId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = '#fff';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+            onMouseDown={e => {
+              if (selection.nodeId) e.currentTarget.style.background = '#e3eaf5';
+            }}
+            onMouseUp={e => {
+              if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
             }}
           >
             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -207,9 +297,24 @@ const App: React.FC = () => {
               width: 28,
               height: 36,
               justifyContent: 'center',
+              transition: 'background 0.15s, box-shadow 0.15s',
             }}
             disabled={!selection.nodeId}
             onClick={() => setNodeMenuOpen(open => !open)}
+            onMouseOver={e => {
+              if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
+              if (selection.nodeId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = '#fff';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+            onMouseDown={e => {
+              if (selection.nodeId) e.currentTarget.style.background = '#e3eaf5';
+            }}
+            onMouseUp={e => {
+              if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
+            }}
           >
             <FaChevronDown size={14} />
           </button>
@@ -305,6 +410,7 @@ const App: React.FC = () => {
               background: '#fff',
               width: 36,
               height: 36,
+              transition: 'background 0.15s, box-shadow 0.15s',
             }}
             disabled={!selection.arcId}
             onClick={() => {
@@ -315,6 +421,20 @@ const App: React.FC = () => {
                   future: [],
                 }));
               }
+            }}
+            onMouseOver={e => {
+              if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
+              if (selection.arcId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = '#fff';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+            onMouseDown={e => {
+              if (selection.arcId) e.currentTarget.style.background = '#e3eaf5';
+            }}
+            onMouseUp={e => {
+              if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
             }}
           >
             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -347,9 +467,24 @@ const App: React.FC = () => {
               width: 28,
               height: 36,
               justifyContent: 'center',
+              transition: 'background 0.15s, box-shadow 0.15s',
             }}
             disabled={!selection.arcId}
             onClick={() => setArcMenuOpen(open => !open)}
+            onMouseOver={e => {
+              if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
+              if (selection.arcId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = '#fff';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+            onMouseDown={e => {
+              if (selection.arcId) e.currentTarget.style.background = '#e3eaf5';
+            }}
+            onMouseUp={e => {
+              if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
+            }}
           >
             <FaChevronDown size={14} />
           </button>
@@ -469,7 +604,7 @@ const App: React.FC = () => {
 
 // Menu button style
 const menuBtnStyle: React.CSSProperties = {
-  background: 'none',
+  background: '#fff',
   border: 'none',
   color: '#1976d2',
   fontSize: 22,
@@ -477,7 +612,7 @@ const menuBtnStyle: React.CSSProperties = {
   cursor: 'pointer',
   padding: 6,
   borderRadius: 4,
-  transition: 'background 0.2s',
+  transition: 'background 0.15s, box-shadow 0.15s',
 };
 
 export default App;

@@ -15,7 +15,7 @@ export type ArcType = {
   sign: '+' | '-';
   color: string;
   curvature: number;
-  sweepFlag?: 0 | 1;
+  curvatureSign: 1 | -1; // always 1 for now
 };
 
 export type SelectionType = {
@@ -79,7 +79,9 @@ export const useCLDStore: UseBoundStore<StoreApi<CLDState>> = create<CLDState>(
     },
     addArc: (from, to) => {
       const id = get().arcCounter.toString();
-      const arc: ArcType = { id, from, to, sign: '+', color: get().defaultArcColor, curvature: 40, sweepFlag: 0 };
+      const curvature = 40;
+      const curvatureSign = (Math.sign(curvature) === -1 ? -1 : 1) as 1 | -1;
+      const arc: ArcType = { id, from, to, sign: '+', color: get().defaultArcColor, curvature, curvatureSign };
       set(state => ({
         history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
         future: [],
