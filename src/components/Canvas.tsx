@@ -421,17 +421,41 @@ const measureTextWidth = (text: string, fontSize = 20, fontWeight = 'bold', font
   return width;
 };
 
-// Helper to estimate label size
-const estimateLabelSize = (label: string, fontSize: number) => {
-  const lines = label.split('\n');
+// Helper to wrap text at word boundaries to fit max width (in px)
+function wrapTextToWidth(text: string, maxWidth: number, fontSize: number, fontWeight = 'bold', fontStyle = 'normal') {
+  const lines: string[] = [];
+  const paragraphs = text.split('\n');
+  for (const para of paragraphs) {
+    const words = para.split(' ');
+    let line = '';
+    for (const word of words) {
+      const testLine = line ? line + ' ' + word : word;
+      const testWidth = measureTextWidth(testLine, fontSize, fontWeight, fontStyle);
+      if (testWidth > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = testLine;
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
+// Helper to estimate label size (now uses wrapped lines)
+const estimateLabelSize = (label: string, fontSize: number, maxWidth = 220) => {
+  const lines = wrapTextToWidth(label, maxWidth, fontSize);
   const longest = lines.reduce((a, b) => a.length > b.length ? a : b, '');
-  // Estimate width: chars * approx char width
-  const charWidth = fontSize * 0.6; // 0.6 is a good estimate for most fonts
-  const width = Math.max(1, longest.length * charWidth);
+  // Estimate width: max of all lines
+  let width = 1;
+  for (const line of lines) {
+    width = Math.max(width, measureTextWidth(line, fontSize, 'bold', 'normal'));
+  }
   // Estimate height: lines * line height
   const lineHeight = fontSize * 1.2;
   const height = lines.length * lineHeight;
-  return { width, height };
+  return { width, height, lines };
 };
 
 const Canvas: React.FC = () => {
@@ -519,10 +543,34 @@ const Canvas: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey) setCtrlPressed(true);
+      if (e.ctrlKey) {
+        setCtrlPressed(true);
+        // If a node is selected and no arc is selected and not already in arrow draw mode, activate arrow draw mode
+        if (
+          selection.nodeId &&
+          !selection.arcId &&
+          !pendingArcStart.current
+        ) {
+          pendingArcStart.current = selection.nodeId;
+          setArcError(null);
+          forceUpdate();
+        }
+      }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (!e.ctrlKey) setCtrlPressed(false);
+      if (!e.ctrlKey) {
+        setCtrlPressed(false);
+        // If pendingArcStart was set due to Ctrl+node selection, clear it
+        if (
+          pendingArcStart.current &&
+          selection.nodeId &&
+          pendingArcStart.current === selection.nodeId
+        ) {
+          pendingArcStart.current = null;
+          setArcError(null);
+          forceUpdate();
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -530,7 +578,7 @@ const Canvas: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [selection.nodeId, selection.arcId]);
 
   const getNode = (id: string) => nodes.find(n => n.id === id);
 
@@ -1165,14 +1213,19 @@ const Canvas: React.FC = () => {
             const isSelected = selection.arcId === arc.id;
             let arcStroke = arc.color;
             let arcStrokeWidth = 2;
-            if (isSelected) {
+            let shadowFilter = 'none';
+            if (isInHighlightedLoop) {
+              arcStrokeWidth = 4; // was 5, now slightly reduced
+              shadowFilter = 'drop-shadow(0px 0px 16px #ffe066) drop-shadow(0px 0px 8px #ffd600)'; // more prominent yellow shadow
+            } else if (isSelected) {
               arcStrokeWidth = 4;
             } else if (isHovered) {
               arcStrokeWidth = 5;
             }
             // Shadow filter for highlighted loop
-            const shadowColor = loopType === 'R' ? 'rgba(220,0,0,0.7)' : loopType === 'B' ? 'rgba(0,180,60,0.7)' : 'rgba(0,0,0,0.2)';
-            const shadowFilter = isInHighlightedLoop ? `drop-shadow(0px 0px 8px ${shadowColor}) drop-shadow(0px 0px 4px ${shadowColor})` : 'none';
+            if (isInHighlightedLoop) {
+              arcStrokeWidth = 4;
+            }
             const markerId = `arrow-${arc.id}-${arc.color.replace('#','')}`;
             return (
               <g key={arc.id}
@@ -1390,9 +1443,12 @@ const Canvas: React.FC = () => {
             const isArrowDrawTo = ctrlPressed && pendingArcStart.current && isHovered && node.id !== pendingArcStart.current;
             // Arrow-draw mode: highlight FROM node (pendingArcStart)
             const isArcFromNode = ctrlPressed && pendingArcStart.current === node.id;
-            const borderColor = isPendingArcStart
-              ? '#ffd600' // yellow for pending arc start
-              : (isHovered || isSelected) ? '#1976d2' : '#bbb';
+            const displayFontSize = 16;
+            const maxLabelWidth = 150;
+            const labelSize = estimateLabelSize(node.label, displayFontSize, maxLabelWidth);
+            const padding = 16;
+            const rx = labelSize.width / 2 + padding;
+            const ry = labelSize.height / 2 + padding;
             return (
               <g
                 key={node.id}
@@ -1413,103 +1469,122 @@ const Canvas: React.FC = () => {
                 onMouseLeave={() => setHoveredNodeId(null)}
                 style={{ cursor: ctrlPressed ? 'crosshair' : 'pointer' }}
               >
-                {/* Development: show reference circle as dotted line */}
-                {devMode && (() => {
-                  const fontSize = 16;
-                  const { width, height } = estimateLabelSize(node.label, fontSize);
-                  const padding = 16;
-                  const rx = width / 2 + padding;
-                  const ry = height / 2 + padding;
-                  return (
-                    <ellipse
-                      cx={node.x}
-                      cy={node.y}
-                      rx={rx}
-                      ry={ry}
-                      fill="none"
-                      stroke="#bbb"
-                      strokeWidth={1}
-                      strokeDasharray="4 3"
-                    />
-                  );
-                })()}
+                {/* Ref ellipse always matches label size + padding */}
+                {devMode && (
+                  <ellipse
+                    cx={node.x}
+                    cy={node.y}
+                    rx={rx}
+                    ry={ry}
+                    fill="none"
+                    stroke="#bbb"
+                    strokeWidth={1}
+                    strokeDasharray="4 3"
+                  />
+                )}
+                {/* Transparent rect for better hover/select interaction */}
+                <rect
+                  x={node.x - labelSize.width / 2}
+                  y={node.y - labelSize.height / 2}
+                  width={labelSize.width}
+                  height={labelSize.height}
+                  fill="transparent"
+                  pointerEvents="all"
+                  onMouseEnter={() => setHoveredNodeId(node.id)}
+                  onMouseLeave={() => setHoveredNodeId(null)}
+                  onMouseDown={e => {
+                    if (e.ctrlKey) {
+                      handleNodeCtrlClick(node.id);
+                      e.stopPropagation();
+                      return;
+                    }
+                    selectArc(undefined);
+                    handleNodeMouseDown(e, node.id);
+                    pendingArcStart.current = null;
+                    setArcError(null);
+                  }}
+                />
                 {/* Node label: editable on double click */}
                 {editingNodeId === node.id ? (
-                  <foreignObject
-                    x={node.x - 60}
-                    y={node.y - 32}
-                    width={120}
-                    height={64}
-                    style={{ pointerEvents: 'auto' }}
-                  >
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <textarea
-                        ref={inputRef as any}
-                        autoFocus
-                        value={editingLabel}
-                        onChange={e => setEditingLabel(e.target.value)}
-                        onBlur={() => {
-                          updateNodeLabel(node.id, editingLabel.trim() || `var_${node.id}`);
-                          setEditingNodeId(null);
-                        }}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            updateNodeLabel(node.id, editingLabel.trim() || `var_${node.id}`);
-                            setEditingNodeId(null);
-                            e.preventDefault();
-                          } else if (e.key === 'Escape') {
-                            setEditingNodeId(null);
-                            e.preventDefault();
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          height: 'auto',
-                          minHeight: '1.2em',
-                          fontSize: isSelected ? 20 : 16,
-                          fontWeight: isArcFromNode || isSelected || isHovered ? 'bold' : 'normal',
-                          fontStyle: 'normal',
-                          color: node.color,
-                          background: 'transparent',
-                          border: 'none',
-                          outline: 'none',
-                          resize: 'none',
-                          textAlign: 'center',
-                          boxSizing: 'border-box',
-                          caretColor: '#1976d2',
-                          padding: 0,
-                          margin: 0,
-                          fontFamily: 'inherit',
-                          lineHeight: 1.2,
-                          userSelect: 'auto',
-                          filter: isArcFromNode
-                            ? 'drop-shadow(0 0 48px #43a047) drop-shadow(0 0 32px #43a047) drop-shadow(0 0 16px #43a047) drop-shadow(0 0 8px #43a047)'
-                            : isArrowDrawTo
-                              ? 'drop-shadow(0 0 32px rgba(67,160,71,0.9)) drop-shadow(0 0 16px #43a047) drop-shadow(0 0 8px #43a047)'
-                              : (isSelected || isHovered)
-                                ? (ctrlPressed ? 'drop-shadow(0 0 8px #43a047)' : 'drop-shadow(0px 2px 6px rgba(255,140,0,1)) drop-shadow(0px 0px 2px rgba(255,140,0,1))')
-                                : 'none',
-                        }}
-                      />
-                    </div>
-                  </foreignObject>
+                  (() => {
+                    const editFontSize = 16; // Always normal size in edit mode
+                    const maxLabelWidth = 150;
+                    const labelSize = estimateLabelSize(editingLabel, editFontSize, maxLabelWidth);
+                    const boxWidth = Math.max(labelSize.width + 32, 120, maxLabelWidth + 32);
+                    const boxHeight = Math.max(labelSize.height + 24, 40);
+                    return (
+                      <foreignObject
+                        x={node.x - boxWidth / 2}
+                        y={node.y - boxHeight / 2}
+                        width={boxWidth}
+                        height={boxHeight}
+                        style={{ pointerEvents: 'auto' }}
+                      >
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <textarea
+                            ref={inputRef as any}
+                            autoFocus
+                            value={editingLabel}
+                            onChange={e => setEditingLabel(e.target.value)}
+                            onBlur={() => {
+                              updateNodeLabel(node.id, editingLabel.trim() || `var_${node.id}`);
+                              setEditingNodeId(null);
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                updateNodeLabel(node.id, editingLabel.trim() || `var_${node.id}`);
+                                setEditingNodeId(null);
+                                e.preventDefault();
+                              } else if (e.key === 'Escape') {
+                                setEditingNodeId(null);
+                                e.preventDefault();
+                              }
+                            }}
+                            wrap="soft"
+                            style={{
+                              width: '100%',
+                              minWidth: 60,
+                              maxWidth: maxLabelWidth,
+                              height: '100%',
+                              minHeight: 24,
+                              maxHeight: 120,
+                              fontSize: editFontSize, // Always normal size
+                              fontWeight: 'normal', // Not bold
+                              fontStyle: 'normal',
+                              color: node.color,
+                              background: 'transparent',
+                              border: 'none',
+                              outline: 'none',
+                              resize: 'none',
+                              textAlign: 'center',
+                              boxSizing: 'border-box',
+                              caretColor: '#1976d2',
+                              padding: 0,
+                              margin: 0,
+                              fontFamily: 'inherit',
+                              lineHeight: 1.2,
+                              userSelect: 'auto',
+                              whiteSpace: 'pre-wrap',
+                              overflowWrap: 'break-word',
+                              filter: 'none',
+                            }}
+                          />
+                        </div>
+                      </foreignObject>
+                    );
+                  })()
                 ) : (
                   <text
                     x={node.x}
-                    y={node.y}
+                    // Vertically center the text block
+                    y={node.y - labelSize.height / 2 + displayFontSize * 1.2 / 2}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fontSize={isSelected ? 20 : 16}
+                    fontSize={16}
                     fill={node.color}
                     fontStyle={'normal'}
                     fontWeight={isArcFromNode || isSelected || isHovered ? 'bold' : 'normal'}
-                    filter={isArrowDrawTo
-                      ? 'drop-shadow(0 0 32px rgba(67,160,71,0.9)) drop-shadow(0 0 16px #43a047) drop-shadow(0 0 8px #43a047)'
-                      : isArcFromNode
-                        ? 'drop-shadow(0 0 48px #43a047) drop-shadow(0 0 32px #43a047) drop-shadow(0 0 16px #43a047) drop-shadow(0 0 8px #43a047)'
-                        : (isSelected || isHovered)
-                          ? (ctrlPressed ? 'drop-shadow(0 0 8px #43a047)' : 'drop-shadow(0px 2px 6px rgba(255,140,0,1)) drop-shadow(0px 0px 2px rgba(255,140,0,1))')
-                          : 'none'}
+                    filter={'none'}
                     style={{ userSelect: 'none', whiteSpace: 'pre', transition: 'font-size 0.15s, filter 0.15s' }}
                     onDoubleClick={e => {
                       setEditingNodeId(node.id);
@@ -1518,9 +1593,13 @@ const Canvas: React.FC = () => {
                       e.stopPropagation();
                     }}
                   >
-                    {node.label.split('\n').map((line, i) => (
-                      <tspan key={i} x={node.x} dy={i === 0 ? 0 : 22}>{line}</tspan>
-                    ))}
+                    {(() => {
+                      const lineHeight = displayFontSize * 1.2;
+                      const lines = wrapTextToWidth(node.label, maxLabelWidth, displayFontSize);
+                      return lines.map((line, i) => (
+                        <tspan key={i} x={node.x} dy={i === 0 ? 0 : lineHeight}>{line}</tspan>
+                      ));
+                    })()}
                   </text>
                 )}
                 {/* Node ID label */}
@@ -1563,8 +1642,23 @@ const Canvas: React.FC = () => {
         boxSizing: 'border-box',
         minHeight: 36,
       }}>
-        <span>
-          <b>{filename}</b> | <b>{numVariables}</b> variable{numVariables !== 1 ? 's' : ''} | <b>{numConnections}</b> connection{numConnections !== 1 ? 's' : ''} | <b>{numLoops}</b> loop{numLoops !== 1 ? 's' : ''}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+          {/* Removed filename from status bar */}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', padding: '0 18px', height: 22, borderRadius: 19, fontSize: 14, fontWeight: 500, marginRight: 8, background: '#ffd86b', color: '#222', boxShadow: '0 1px 4px #0001',
+          }}>
+            <span style={{ fontWeight: 700, marginRight: 6 }}>{numVariables}</span> Variables
+          </span>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', padding: '0 18px', height: 22, borderRadius: 19, fontSize: 14, fontWeight: 500, marginRight: 8, background: '#a6f4a6', color: '#222', boxShadow: '0 1px 4px #0001',
+          }}>
+            <span style={{ fontWeight: 700, marginRight: 6 }}>{numConnections}</span> Connections
+          </span>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', padding: '0 18px', height: 22, borderRadius: 19, fontSize: 14, fontWeight: 500, marginRight: 8, background: '#7da6ff', color: '#222', boxShadow: '0 1px 4px #0001',
+          }}>
+            <span style={{ fontWeight: 700, marginRight: 6 }}>{numLoops}</span> Loops
+          </span>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
           {highlightedLoop && highlightedLoop.id && highlightedLoop.type ? (
