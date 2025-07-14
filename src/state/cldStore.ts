@@ -37,6 +37,7 @@ export type CLDState = {
   setDefaultArcColor: (color: string) => void;
   addNode: (x: number, y: number) => void;
   moveNode: (id: string, x: number, y: number) => void;
+  moveNodeNoHistory: (id: string, x: number, y: number) => void;
   addArc: (from: string, to: string) => void;
   selectNode: (id: string | undefined) => void;
   selectArc: (id: string | undefined) => void;
@@ -46,6 +47,7 @@ export type CLDState = {
   updateArcSign: (id: string) => void;
   removeNode: (id: string) => void;
   removeArc: (id: string) => void;
+  clearAll: () => void;
 };
 
 export const useCLDStore: UseBoundStore<StoreApi<CLDState>> = create<CLDState>(
@@ -68,6 +70,11 @@ export const useCLDStore: UseBoundStore<StoreApi<CLDState>> = create<CLDState>(
         future: [],
         nodes: [...state.nodes, { id, x, y, label: 'Variable', color: get().defaultNodeColor }],
         nodeCounter: state.nodeCounter + 1,
+      }));
+    },
+    moveNodeNoHistory: (id, x, y) => {
+      set(state => ({
+        nodes: state.nodes.map(n => n.id === id ? { ...n, x, y } : n),
       }));
     },
     moveNode: (id, x, y) => {
@@ -142,6 +149,17 @@ export const useCLDStore: UseBoundStore<StoreApi<CLDState>> = create<CLDState>(
         future: [],
         arcs: state.arcs.filter(a => a.id !== id),
         selection: {},
+      }));
+    },
+    clearAll: () => {
+      set(state => ({
+        history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
+        future: [],
+        nodes: [],
+        arcs: [],
+        selection: {},
+        nodeCounter: 1,
+        arcCounter: 1,
       }));
     },
   })

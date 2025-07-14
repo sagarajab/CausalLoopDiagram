@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import Canvas from './components/Canvas';
 import { useCLDStore } from './state/cldStore';
-import { FaUndo, FaRedo, FaSync, FaFolderOpen, FaSave, FaPalette, FaChevronDown, FaLongArrowAltRight } from 'react-icons/fa';
-import { MdTextFields } from 'react-icons/md';
+import { LuUndo2 , LuRedo2 , LuInfinity , LuFolderOpen , LuSave, LuPalette, LuChevronDown, LuSpline, LuEraser } from 'react-icons/lu';
+import { LuType  } from 'react-icons/lu';
 
 const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
   const arcs = useCLDStore(state => state.arcs);
@@ -122,6 +122,11 @@ const App: React.FC = () => {
   const arcDragStart = React.useRef<null | { arcId: string, mx: number, my: number, nx: number, ny: number, sign: number }>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [filename, setFilename] = useState('Untitled');
+  const [editingFilename, setEditingFilename] = useState(false);
+  const [tempFilename, setTempFilename] = useState(filename);
+  const filenameInputRef = useRef<HTMLInputElement>(null);
+  const FILENAME_BOX_WIDTH = 250;
 
   const handleRefresh = () => {
     setRefreshKey(k => k + 1);
@@ -136,11 +141,15 @@ const App: React.FC = () => {
       defaultNodeColor,
       defaultArcColor,
     };
+    let exportName = filename.trim() || 'Untitled';
+    if (!exportName.toLowerCase().endsWith('.cld')) {
+      exportName += '.cld';
+    }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'diagram.cld';
+    a.download = exportName;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
@@ -187,6 +196,9 @@ const App: React.FC = () => {
           defaultNodeColor: data.defaultNodeColor || '#222',
           defaultArcColor: data.defaultArcColor || '#888',
         }));
+        // Set filename to file name without extension
+        const baseName = file.name.replace(/\.[^/.]+$/, '');
+        setFilename(baseName || 'Untitled');
         setTab('canvas');
         setRefreshKey(k => k + 1);
       } catch (err) {
@@ -236,24 +248,75 @@ const App: React.FC = () => {
     <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column' }}>
       {/* Menu bar */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', borderBottom: '1px solid #ddd', background: '#fff', position: 'relative' }}>
-        <button
-          onClick={undo}
-          title="Undo"
-          style={menuBtnStyle}
-          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
-          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
-          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        ><FaUndo size={22} /></button>
-        <button
-          onClick={redo}
-          title="Redo"
-          style={menuBtnStyle}
-          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
-          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
-          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        ><FaRedo size={22} /></button>
+        {editingFilename ? (
+          <input
+            ref={filenameInputRef}
+            value={tempFilename}
+            onChange={e => setTempFilename(e.target.value)}
+            onBlur={() => {
+              setFilename(tempFilename.trim() || 'Untitled');
+              setEditingFilename(false);
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                setFilename(tempFilename.trim() || 'Untitled');
+                setEditingFilename(false);
+              } else if (e.key === 'Escape') {
+                setTempFilename(filename);
+                setEditingFilename(false);
+              }
+            }}
+            style={{
+              fontWeight: 700,
+              fontSize: 20,
+              marginRight: 24,
+              color: '#222',
+              minWidth: FILENAME_BOX_WIDTH,
+              maxWidth: FILENAME_BOX_WIDTH,
+              width: FILENAME_BOX_WIDTH,
+              userSelect: 'auto',
+              letterSpacing: 0.5,
+              border: '1px solid #bbb',
+              borderRadius: 4,
+              padding: '2px 8px',
+              outline: 'none',
+              background: '#f9f9f9',
+              boxSizing: 'border-box',
+              transition: 'none',
+            }}
+            autoFocus
+          />
+        ) : (
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: 20,
+              marginRight: 24,
+              color: '#222',
+              minWidth: FILENAME_BOX_WIDTH,
+              maxWidth: FILENAME_BOX_WIDTH,
+              width: FILENAME_BOX_WIDTH,
+              userSelect: 'none',
+              letterSpacing: 0.5,
+              cursor: 'pointer',
+              display: 'inline-block',
+              overflow: 'hidden',/**\] */
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              boxSizing: 'border-box',
+              transition: 'none',
+            }}
+            title="Click to edit filename"
+            onClick={() => {
+              setTempFilename(filename);
+              setEditingFilename(true);
+              setTimeout(() => filenameInputRef.current?.focus(), 0);
+            }}
+          >
+            {filename}
+          </span>
+        )}
+        {/* Open */}
         <button
           onClick={handleLoad}
           title="Open"
@@ -262,7 +325,9 @@ const App: React.FC = () => {
           onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
           onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
           onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        ><FaFolderOpen size={22} /></button>
+        >
+          <LuFolderOpen size={22} stroke="#333" strokeWidth={2} />
+        </button>
         <input
           type="file"
           accept=".cld,application/json"
@@ -270,6 +335,7 @@ const App: React.FC = () => {
           style={{ display: 'none' }}
           onChange={handleFileChange}
         />
+        {/* Save */}
         <button
           onClick={handleExport}
           title="Save"
@@ -278,7 +344,10 @@ const App: React.FC = () => {
           onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
           onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
           onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        ><FaSave size={22} /></button>
+        >
+          <LuSave size={22} stroke="#333" strokeWidth={2} />
+        </button>
+        {/* Sync */}
         <button
           onClick={handleRefresh}
           title="Sync"
@@ -287,8 +356,46 @@ const App: React.FC = () => {
           onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
           onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
           onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        ><FaSync size={22} /></button>
-        {/* Default node color split button */}
+        >
+          <LuInfinity size={22} stroke="#333" strokeWidth={2} />
+        </button>
+        {/* Undo */}
+        <button
+          onClick={undo}
+          title="Undo"
+          style={menuBtnStyle}
+          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+        >
+          <LuUndo2 size={22} stroke="#333" strokeWidth={2} />
+        </button>
+        {/* Redo */}
+        <button
+          onClick={redo}
+          title="Redo"
+          style={menuBtnStyle}
+          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+        >
+          <LuRedo2 size={22} stroke="#333" strokeWidth={2} />
+        </button>
+        {/* Clear Canvas */}
+        <button
+          onClick={() => { useCLDStore.getState().clearAll(); }}
+          title="Clear Canvas"
+          style={menuBtnStyle}
+          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+        >
+          <LuEraser size={22} stroke="#333" strokeWidth={2} />
+        </button>
+        {/* T_color (node color split button) */}
         <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'row', alignItems: 'flex-end', verticalAlign: 'top' }} ref={nodeBtnRef}>
           <button
             title="Apply node color"
@@ -338,7 +445,7 @@ const App: React.FC = () => {
             }}
           >
             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <MdTextFields size={22} color="#1976d2" style={{ display: 'block', marginBottom: 0 }} />
+              <LuType size={22} strokeWidth={2} color="#333" style={{ display: 'block', marginBottom: 0 }} />
               <div style={{
                 width: 20,
                 height: 4,
@@ -386,7 +493,7 @@ const App: React.FC = () => {
               if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
             }}
           >
-            <FaChevronDown size={14} />
+            <LuChevronDown size={14} strokeWidth={2} color="#333"  />
           </button>
           {/* Context menu for node color */}
           {nodeMenuOpen && selection.nodeId && (
@@ -458,7 +565,7 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
-        {/* Default arc color split button */}
+        {/* Arrow_Color (arc color split button) */}
         <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'row', alignItems: 'flex-end', verticalAlign: 'top' }} ref={arcBtnRef}>
           <button
             title="Apply arrow color"
@@ -508,7 +615,7 @@ const App: React.FC = () => {
             }}
           >
             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <FaLongArrowAltRight size={22} color="#1976d2" style={{ display: 'block', marginBottom: 0 }} />
+              <LuSpline size={22} color="#333" style={{ display: 'block', marginBottom: 0 }} />
               <div style={{
                 width: 22,
                 height: 4,
@@ -556,7 +663,7 @@ const App: React.FC = () => {
               if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
             }}
           >
-            <FaChevronDown size={14} />
+            <LuChevronDown size={14} strokeWidth={2} color="#333"/>
           </button>
           {/* Context menu for arc color */}
           {arcMenuOpen && selection.arcId && (

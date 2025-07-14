@@ -536,11 +536,11 @@ const Canvas: React.FC = () => {
 
   // Add node at double-click
   const handleDoubleClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    const svg = e.currentTarget;
-    const pt = svg.createSVGPoint();
+    if (!canvasRef.current) return;
+    const pt = canvasRef.current.createSVGPoint();
     pt.x = e.clientX;
     pt.y = e.clientY;
-    const cursorpt = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+    const cursorpt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
     // Prevent node creation if double-click is over a node or arc
     // Check nodes
     const overNode = nodes.some(node => {
@@ -683,11 +683,11 @@ const Canvas: React.FC = () => {
   // Update mouse position on mouse move (only in arrow-draw mode)
   const handleCanvasMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (ctrlPressed && pendingArcStart.current) {
-      const svg = e.currentTarget;
-      const pt = svg.createSVGPoint();
+      if (!canvasRef.current) return;
+      const pt = canvasRef.current.createSVGPoint();
       pt.x = e.clientX;
       pt.y = e.clientY;
-      const cursorpt = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+      const cursorpt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
       setArrowDrawMouse({ x: cursorpt.x, y: cursorpt.y });
     } else if (arrowDrawMouse) {
       setArrowDrawMouse(null);
@@ -723,12 +723,11 @@ const Canvas: React.FC = () => {
     // Start drag
     const node = getNode(nodeId);
     if (node) {
-      // Store drag start in SVG coordinates
-      const svg = (e.target as SVGSVGElement).ownerSVGElement || (e.target as SVGSVGElement);
-      const pt = svg.createSVGPoint();
+      if (!canvasRef.current) return;
+      const pt = canvasRef.current.createSVGPoint();
       pt.x = e.clientX;
       pt.y = e.clientY;
-      const svgStart = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+      const svgStart = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
       dragStart.current = {
         x: svgStart.x, // SVG coordinates
         y: svgStart.y,
@@ -744,20 +743,19 @@ const Canvas: React.FC = () => {
   // SVG mouse move: drag node or arc handle
   const handleMouseMove = (e: React.MouseEvent) => {
     if (draggingNodeId && dragStart.current) {
-      // Get current mouse position in SVG coordinates
-      const svg = (e.target as SVGSVGElement).ownerSVGElement || (e.target as SVGSVGElement);
-      const pt = svg.createSVGPoint();
+      if (!canvasRef.current) return;
+      const pt = canvasRef.current.createSVGPoint();
       pt.x = e.clientX;
       pt.y = e.clientY;
-      const cursorpt = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+      const cursorpt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
       const dx = cursorpt.x - dragStart.current.x;
       const dy = cursorpt.y - dragStart.current.y;
       if (!isDragging && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
         setIsDragging(true);
       }
       if (isDragging) {
-        // Move node by delta in SVG coordinates
-        moveNode(draggingNodeId, dragStart.current.nodeX + dx, dragStart.current.nodeY + dy);
+        // Move node by delta in SVG coordinates (no history)
+        useCLDStore.getState().moveNodeNoHistory(draggingNodeId, dragStart.current.nodeX + dx, dragStart.current.nodeY + dy);
       }
     } else if (pendingArcDragStart.current) {
       // Check if mouse moved enough to start drag
@@ -795,16 +793,15 @@ const Canvas: React.FC = () => {
         const from = getNode(arc.from);
         const to = getNode(arc.to);
         if (from && to) {
-          const { mx: mxDrag, my: myDrag, nx: nxDrag, ny: nyDrag } = arcDragStart.current;
-          const svg = (e.target as SVGSVGElement).ownerSVGElement || (e.target as SVGSVGElement);
-          const pt = svg.createSVGPoint();
+          if (!canvasRef.current) return;
+          const pt = canvasRef.current.createSVGPoint();
           pt.x = e.clientX;
           pt.y = e.clientY;
-          const cursorpt = pt.matrixTransform(svg.getScreenCTM()?.inverse());
-          const px = cursorpt.x - mxDrag;
-          const py = cursorpt.y - myDrag;
+          const cursorpt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
+          const px = cursorpt.x - arcDragStart.current.mx;
+          const py = cursorpt.y - arcDragStart.current.my;
           // Project mouse movement onto perpendicular
-          let curvature = px * nxDrag + py * nyDrag;
+          let curvature = px * arcDragStart.current.nx + py * arcDragStart.current.ny;
           // Clamp as before
           const dx = to.x - from.x;
           const dy = to.y - from.y;
@@ -830,6 +827,14 @@ const Canvas: React.FC = () => {
         selectNode(dragStart.current.nodeId);
         console.log('Node selected:', dragStart.current.nodeId);
       } else {
+        // Node was moved, push to history
+        if (canvasRef.current) {
+          const pt = canvasRef.current.createSVGPoint();
+          pt.x = e.clientX;
+          pt.y = e.clientY;
+          const cursorpt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
+          useCLDStore.getState().moveNode(draggingNodeId, cursorpt.x, cursorpt.y);
+        }
         console.log('Node moved:', dragStart.current.nodeId);
       }
     }
@@ -900,11 +905,10 @@ const Canvas: React.FC = () => {
     const rect = canvasRef.current.getBoundingClientRect();
     const cx = rect.width / 2;
     const cy = rect.height / 2;
-    const svg = canvasRef.current;
-    const pt = svg.createSVGPoint();
+    const pt = canvasRef.current.createSVGPoint();
     pt.x = cx;
     pt.y = cy;
-    const center = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+    const center = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
     // Adjust pan so zoom is centered on canvas center
     const dx = center.x - pan.x;
     const dy = center.y - pan.y;
@@ -920,11 +924,11 @@ const Canvas: React.FC = () => {
   const handleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
     if (e.ctrlKey) return; // Let browser handle ctrl+scroll
     e.preventDefault();
-    const svg = e.currentTarget;
-    const pt = svg.createSVGPoint();
+    if (!canvasRef.current) return;
+    const pt = canvasRef.current.createSVGPoint();
     pt.x = e.clientX;
     pt.y = e.clientY;
-    const cursorpt = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+    const cursorpt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
     // Compute new scale
     let newScale = scale * (e.deltaY < 0 ? 1.1 : 0.9);
     newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
@@ -993,28 +997,7 @@ const Canvas: React.FC = () => {
   // --- Layout: left column for boxes, right for SVG ---
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
-      {/* FileName Box at the top left */}
-      <div
-        style={{
-          width: 370, // matches the left column width + padding
-          background: '#eaeaea',
-          borderBottom: '2px solid #bbb',
-          fontWeight: 700,
-          fontSize: 32,
-          padding: '8px 0 8px 18px',
-          letterSpacing: 0.5,
-          color: '#222',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          zIndex: 20,
-          boxSizing: 'border-box',
-          userSelect: 'none',
-        }}
-      >
-        {filename}.cld
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'row', height: '100%', width: '100%', minHeight: 0, overflow: 'hidden', marginTop: 48 }}>
+      <div style={{ display: 'flex', flexDirection: 'row', height: '100%', width: '100%', minHeight: 0, overflow: 'hidden' }}>
         {/* Left column: Problem statement and loops */}
         <div style={{ width: 320, minWidth: 220, maxWidth: 400, background: '#f8f9fa', borderRight: '1px solid #e0e0e0', padding: 20, display: 'flex', flexDirection: 'column', gap: 24, minHeight: 0, overflow: 'hidden' }}>
           {/* Problem Statement Box */}
@@ -1556,14 +1539,16 @@ const Canvas: React.FC = () => {
               display: 'inline-flex',
               alignItems: 'center',
               userSelect: 'none',
-              color: devMode ? '#1976d2' : '#aaa',
+              color: devMode ? '#444' : '#888',
               fontSize: 22,
               transition: 'color 0.2s',
             }}
+            onMouseOver={e => { e.currentTarget.style.background = '#e0e0e0'; }}
+            onMouseOut={e => { e.currentTarget.style.background = 'none'; }}
           >
             {/* Simple bug icon SVG */}
-            <svg width="22" height="22" viewBox="0 0 22 22" fill={devMode ? '#1976d2' : 'none'} stroke={devMode ? '#1976d2' : '#888'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-              <circle cx="11" cy="14" r="5" fill={devMode ? '#1976d2' : 'none'} />
+            <svg width="22" height="22" viewBox="0 0 22 22" fill={devMode ? '#444' : 'none'} stroke={devMode ? '#444' : '#888'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+              <circle cx="11" cy="14" r="5" fill={devMode ? '#444' : 'none'} />
               <line x1="11" y1="3" x2="11" y2="8" />
               <line x1="4" y1="14" x2="18" y2="14" />
               <line x1="6" y1="10" x2="3" y2="7" />
