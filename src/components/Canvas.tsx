@@ -654,8 +654,8 @@ const Canvas: React.FC = () => {
 
   // Helper: robust intersection of arc (reference circle) with ellipse
   function getArcEndpoints(from: NodeType, to: NodeType, refCircle: { cx: number; cy: number; r: number }, arc: ArcType) {
-    const fontSizeFrom = (selection.nodeId === from.id || hoveredNodeId === from.id) ? 20 : 16;
-    const fontSizeTo = (selection.nodeId === to.id || hoveredNodeId === to.id) ? 20 : 16;
+    const fontSizeFrom = (selection.nodeId === from.id) ? 20 : 16;
+    const fontSizeTo = (selection.nodeId === to.id) ? 20 : 16;
     const { width: wFrom, height: hFrom } = estimateLabelSize(from.label, fontSizeFrom);
     const { width: wTo, height: hTo } = estimateLabelSize(to.label, fontSizeTo);
     const padding = 16;
@@ -856,6 +856,7 @@ const Canvas: React.FC = () => {
     }
     setArcDrag(null);
     dragStart.current = null;
+    // Do NOT clear arc selection here; only clear selection when clicking on canvas background
   };
 
   // --- Problem statement state ---
@@ -1080,7 +1081,7 @@ const Canvas: React.FC = () => {
                 id={markerId}
                 markerWidth={30}
                 markerHeight={12}
-                refX={14}
+                refX={8}
                 refY={6}
                 orient="auto"
                 markerUnits="userSpaceOnUse"
@@ -1167,7 +1168,7 @@ const Canvas: React.FC = () => {
             if (isSelected) {
               arcStrokeWidth = 4;
             } else if (isHovered) {
-              arcStrokeWidth = 3;
+              arcStrokeWidth = 5;
             }
             // Shadow filter for highlighted loop
             const shadowColor = loopType === 'R' ? 'rgba(220,0,0,0.7)' : loopType === 'B' ? 'rgba(0,180,60,0.7)' : 'rgba(0,0,0,0.2)';
@@ -1199,8 +1200,26 @@ const Canvas: React.FC = () => {
                   fill="none"
                   style={{ cursor: 'pointer' }}
                   onMouseDown={e => {
-                    selectArc(arc.id);
-                    startArcCurvatureDrag(arc, from, to, e.clientX, e.clientY);
+                    selectArc(arc.id); // Always select arc on drag start
+                    // Immediately start drag, not just pending
+                    const dxArc = to.x - from.x;
+                    const dyArc = to.y - from.y;
+                    const len = Math.sqrt(dxArc * dxArc + dyArc * dyArc);
+                    const offsetX = (dxArc / len) * NODE_RADIUS;
+                    const offsetY = (dyArc / len) * NODE_RADIUS;
+                    const startX = from.x + offsetX;
+                    const startY = from.y + offsetY;
+                    const endX = to.x - offsetX;
+                    const endY = to.y - offsetY;
+                    const mx = (startX + endX) / 2;
+                    const my = (startY + endY) / 2;
+                    const dx2 = endX - startX;
+                    const dy2 = endY - startY;
+                    const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                    let nx = -dy2 / len2;
+                    let ny = dx2 / len2;
+                    arcDragStart.current = { arcId: arc.id, mx, my, nx, ny, sign: 1 };
+                    setArcDrag({ arcId: arc.id, curvature: arc.curvature });
                     e.stopPropagation();
                   }}
                 />
@@ -1211,7 +1230,7 @@ const Canvas: React.FC = () => {
                   strokeWidth={arcStrokeWidth}
                   fill="none"
                   markerEnd={`url(#${markerId})`}
-                  style={{ filter: shadowFilter, transition: 'filter 0.2s', cursor: 'pointer' }}
+                  style={{ filter: shadowFilter, transition: 'filter 0.2s', cursor: 'pointer', pointerEvents: 'none' }}
                 />
                 {/* Arc sign toggle: interactive transparent circle and text for display */}
                 <g>
@@ -1369,6 +1388,8 @@ const Canvas: React.FC = () => {
             const isPendingArcStart = pendingArcStart.current === node.id;
             // Arrow-draw mode: highlight TO node with green shadow
             const isArrowDrawTo = ctrlPressed && pendingArcStart.current && isHovered && node.id !== pendingArcStart.current;
+            // Arrow-draw mode: highlight FROM node (pendingArcStart)
+            const isArcFromNode = ctrlPressed && pendingArcStart.current === node.id;
             const borderColor = isPendingArcStart
               ? '#ffd600' // yellow for pending arc start
               : (isHovered || isSelected) ? '#1976d2' : '#bbb';
@@ -1394,7 +1415,7 @@ const Canvas: React.FC = () => {
               >
                 {/* Development: show reference circle as dotted line */}
                 {devMode && (() => {
-                  const fontSize = isSelected || isHovered ? 20 : 16;
+                  const fontSize = 16;
                   const { width, height } = estimateLabelSize(node.label, fontSize);
                   const padding = 16;
                   const rx = width / 2 + padding;
@@ -1445,8 +1466,8 @@ const Canvas: React.FC = () => {
                           width: '100%',
                           height: 'auto',
                           minHeight: '1.2em',
-                          fontSize: isSelected || isHovered ? 20 : 16,
-                          fontWeight: isSelected ? 'bold' : 'normal',
+                          fontSize: isSelected ? 20 : 16,
+                          fontWeight: isArcFromNode || isSelected || isHovered ? 'bold' : 'normal',
                           fontStyle: 'normal',
                           color: node.color,
                           background: 'transparent',
@@ -1461,11 +1482,13 @@ const Canvas: React.FC = () => {
                           fontFamily: 'inherit',
                           lineHeight: 1.2,
                           userSelect: 'auto',
-                          filter: isArrowDrawTo
-                            ? 'drop-shadow(0 0 32px rgba(67,160,71,0.9)) drop-shadow(0 0 16px #43a047) drop-shadow(0 0 8px #43a047)'
-                            : (isSelected || isHovered)
-                              ? (ctrlPressed ? 'drop-shadow(0 0 8px #43a047)' : 'drop-shadow(0px 2px 6px rgba(255,140,0,1)) drop-shadow(0px 0px 2px rgba(255,140,0,1))')
-                              : 'none',
+                          filter: isArcFromNode
+                            ? 'drop-shadow(0 0 48px #43a047) drop-shadow(0 0 32px #43a047) drop-shadow(0 0 16px #43a047) drop-shadow(0 0 8px #43a047)'
+                            : isArrowDrawTo
+                              ? 'drop-shadow(0 0 32px rgba(67,160,71,0.9)) drop-shadow(0 0 16px #43a047) drop-shadow(0 0 8px #43a047)'
+                              : (isSelected || isHovered)
+                                ? (ctrlPressed ? 'drop-shadow(0 0 8px #43a047)' : 'drop-shadow(0px 2px 6px rgba(255,140,0,1)) drop-shadow(0px 0px 2px rgba(255,140,0,1))')
+                                : 'none',
                         }}
                       />
                     </div>
@@ -1476,15 +1499,17 @@ const Canvas: React.FC = () => {
                     y={node.y}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fontSize={isSelected || isHovered ? 20 : 16}
+                    fontSize={isSelected ? 20 : 16}
                     fill={node.color}
                     fontStyle={'normal'}
-                    fontWeight={isSelected ? 'bold' : 'normal'}
+                    fontWeight={isArcFromNode || isSelected || isHovered ? 'bold' : 'normal'}
                     filter={isArrowDrawTo
                       ? 'drop-shadow(0 0 32px rgba(67,160,71,0.9)) drop-shadow(0 0 16px #43a047) drop-shadow(0 0 8px #43a047)'
-                      : (isSelected || isHovered)
-                        ? (ctrlPressed ? 'drop-shadow(0 0 8px #43a047)' : 'drop-shadow(0px 2px 6px rgba(255,140,0,1)) drop-shadow(0px 0px 2px rgba(255,140,0,1))')
-                        : 'none'}
+                      : isArcFromNode
+                        ? 'drop-shadow(0 0 48px #43a047) drop-shadow(0 0 32px #43a047) drop-shadow(0 0 16px #43a047) drop-shadow(0 0 8px #43a047)'
+                        : (isSelected || isHovered)
+                          ? (ctrlPressed ? 'drop-shadow(0 0 8px #43a047)' : 'drop-shadow(0px 2px 6px rgba(255,140,0,1)) drop-shadow(0px 0px 2px rgba(255,140,0,1))')
+                          : 'none'}
                     style={{ userSelect: 'none', whiteSpace: 'pre', transition: 'font-size 0.15s, filter 0.15s' }}
                     onDoubleClick={e => {
                       setEditingNodeId(node.id);
