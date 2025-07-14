@@ -578,7 +578,7 @@ const Canvas: React.FC = () => {
     if (!overNode && !overArc) {
       // Add node and immediately enter edit mode with default name
       const nextId = (nodes.length > 0 ? Math.max(...nodes.map(n => Number(n.id))) + 1 : 1).toString();
-      addNode(cursorpt.x, cursorpt.y);
+      addNode((cursorpt.x - pan.x) / scale, (cursorpt.y - pan.y) / scale);
       setTimeout(() => {
         setEditingNodeId(nextId);
         setEditingLabel(`var_${nextId}`);
@@ -688,7 +688,7 @@ const Canvas: React.FC = () => {
       pt.x = e.clientX;
       pt.y = e.clientY;
       const cursorpt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
-      setArrowDrawMouse({ x: cursorpt.x, y: cursorpt.y });
+      setArrowDrawMouse({ x: (cursorpt.x - pan.x) / scale, y: (cursorpt.y - pan.y) / scale });
     } else if (arrowDrawMouse) {
       setArrowDrawMouse(null);
     }
@@ -798,8 +798,10 @@ const Canvas: React.FC = () => {
           pt.x = e.clientX;
           pt.y = e.clientY;
           const cursorpt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
-          const px = cursorpt.x - arcDragStart.current.mx;
-          const py = cursorpt.y - arcDragStart.current.my;
+          const logicalX = (cursorpt.x - pan.x) / scale;
+          const logicalY = (cursorpt.y - pan.y) / scale;
+          const px = logicalX - arcDragStart.current.mx;
+          const py = logicalY - arcDragStart.current.my;
           // Project mouse movement onto perpendicular
           let curvature = px * arcDragStart.current.nx + py * arcDragStart.current.ny;
           // Clamp as before
@@ -828,12 +830,18 @@ const Canvas: React.FC = () => {
         console.log('Node selected:', dragStart.current.nodeId);
       } else {
         // Node was moved, push to history
-        if (canvasRef.current) {
+        if (dragStart.current && canvasRef.current) {
           const pt = canvasRef.current.createSVGPoint();
           pt.x = e.clientX;
           pt.y = e.clientY;
           const cursorpt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
-          useCLDStore.getState().moveNode(draggingNodeId, cursorpt.x, cursorpt.y);
+          const dx = cursorpt.x - dragStart.current.x;
+          const dy = cursorpt.y - dragStart.current.y;
+          useCLDStore.getState().moveNode(
+            draggingNodeId,
+            dragStart.current.nodeX + dx,
+            dragStart.current.nodeY + dy
+          );
         }
         console.log('Node moved:', dragStart.current.nodeId);
       }
@@ -958,8 +966,8 @@ const Canvas: React.FC = () => {
   };
   const handlePanMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (isPanning && panStart.current) {
-      const dx = e.clientX - panStart.current.x;
-      const dy = e.clientY - panStart.current.y;
+      const dx = (e.clientX - panStart.current.x) / scale;
+      const dy = (e.clientY - panStart.current.y) / scale;
       setPan({ x: panStart.current.panX + dx, y: panStart.current.panY + dy });
     }
   };
@@ -999,14 +1007,26 @@ const Canvas: React.FC = () => {
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', flexDirection: 'row', height: '100%', width: '100%', minHeight: 0, overflow: 'hidden' }}>
         {/* Left column: Problem statement and loops */}
-        <div style={{ width: 320, minWidth: 220, maxWidth: 400, background: '#f8f9fa', borderRight: '1px solid #e0e0e0', padding: 20, display: 'flex', flexDirection: 'column', gap: 24, minHeight: 0, overflow: 'hidden' }}>
+        <div style={{
+          width: 320,
+          minWidth: 220,
+          maxWidth: 400,
+          background: '#ebebeb', // <--- CHANGE THIS LINE
+          borderRight: '1px solid #e0e0e0',
+          padding: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 24,
+          minHeight: 0,
+          overflow: 'hidden'
+        }}>
           {/* Problem Statement Box */}
           <div style={{ marginBottom: 12, flexShrink: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Problem Statement</div>
             <textarea
               value={problemStatement}
               onChange={e => setProblemStatement(e.target.value)}
-              style={{ width: '100%', minHeight: 80, fontSize: 15, padding: 8, borderRadius: 6, border: '1px solid #bbb', resize: 'vertical', background: '#fff', color: '#222', boxSizing: 'border-box' }}
+              style={{ width: '100%', minHeight: 80, maxHeight: 500, fontSize: 15, padding: 8, borderRadius: 6, border: '1px solid #bbb', resize: 'vertical', background: '#fff', color: '#222', boxSizing: 'border-box', overflowY: 'auto' }}
             />
           </div>
           {/* Loops Box */}

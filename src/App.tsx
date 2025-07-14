@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import Canvas from './components/Canvas';
 import { useCLDStore } from './state/cldStore';
-import { LuUndo2 , LuRedo2 , LuInfinity , LuFolderOpen , LuSave, LuPalette, LuChevronDown, LuSpline, LuEraser } from 'react-icons/lu';
+import { LuUndo2 , LuRedo2 , LuInfinity , LuFolderOpen , LuSave, LuPalette, LuChevronDown, LuSpline, LuEraser, LuLayout, LuBarChart } from 'react-icons/lu';
 import { LuType  } from 'react-icons/lu';
 
 const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
@@ -68,7 +68,6 @@ const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
           </table>
         </div>
         {/* Vertical divider */}
-        <div style={{ width: 1, background: '#eee', alignSelf: 'stretch', margin: '0 8px' }} />
         <div style={{ minWidth: 400, flex: '1 1 0' }}>
           <h3>Adjacency Matrix</h3>
           <table style={{ borderCollapse: 'collapse', minWidth: 400 }}>
@@ -280,7 +279,7 @@ const App: React.FC = () => {
               borderRadius: 4,
               padding: '2px 8px',
               outline: 'none',
-              background: '#f9f9f9',
+              background: '#cfcfcf',
               boxSizing: 'border-box',
               transition: 'none',
             }}
@@ -316,460 +315,482 @@ const App: React.FC = () => {
             {filename}
           </span>
         )}
-        {/* Open */}
-        <button
-          onClick={handleLoad}
-          title="Open"
-          style={menuBtnStyle}
-          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
-          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
-          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        >
-          <LuFolderOpen size={22} stroke="#333" strokeWidth={2} />
-        </button>
-        <input
-          type="file"
-          accept=".cld,application/json"
-          ref={fileInputRef}
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-        {/* Save */}
-        <button
-          onClick={handleExport}
-          title="Save"
-          style={menuBtnStyle}
-          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
-          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
-          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        >
-          <LuSave size={22} stroke="#333" strokeWidth={2} />
-        </button>
-        {/* Sync */}
-        <button
-          onClick={handleRefresh}
-          title="Sync"
-          style={menuBtnStyle}
-          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
-          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
-          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        >
-          <LuInfinity size={22} stroke="#333" strokeWidth={2} />
-        </button>
-        {/* Undo */}
-        <button
-          onClick={undo}
-          title="Undo"
-          style={menuBtnStyle}
-          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
-          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
-          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        >
-          <LuUndo2 size={22} stroke="#333" strokeWidth={2} />
-        </button>
-        {/* Redo */}
-        <button
-          onClick={redo}
-          title="Redo"
-          style={menuBtnStyle}
-          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
-          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
-          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        >
-          <LuRedo2 size={22} stroke="#333" strokeWidth={2} />
-        </button>
-        {/* Clear Canvas */}
-        <button
-          onClick={() => { useCLDStore.getState().clearAll(); }}
-          title="Clear Canvas"
-          style={menuBtnStyle}
-          onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
-          onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-          onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
-          onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        >
-          <LuEraser size={22} stroke="#333" strokeWidth={2} />
-        </button>
-        {/* T_color (node color split button) */}
-        <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'row', alignItems: 'flex-end', verticalAlign: 'top' }} ref={nodeBtnRef}>
+        {/* Icon button group with gap for equidistant spacing */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          {/* Open */}
           <button
-            title="Apply node color"
-            style={{
-              ...menuBtnStyle,
-              marginRight: 0,
-              position: 'relative',
-              cursor: selection.nodeId ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: selection.nodeId ? 1 : 0.5,
-              pointerEvents: selection.nodeId ? 'auto' : 'none',
-              borderTopRightRadius: 0,
-              borderBottomRightRadius: 0,
-              borderRight: 'none',
-              paddingRight: 0,
-              background: '#fff',
-              width: 36,
-              height: 36,
-              transition: 'background 0.15s, box-shadow 0.15s',
-            }}
-            disabled={!selection.nodeId}
-            onClick={() => {
-              if (selection.nodeId) {
-                useCLDStore.setState(state => ({
-                  nodes: state.nodes.map(n => n.id === selection.nodeId ? { ...n, color: defaultNodeColor } : n),
-                  history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
-                  future: [],
-                }));
-              }
-            }}
-            onMouseOver={e => {
-              if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
-              if (selection.nodeId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.background = '#fff';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-            onMouseDown={e => {
-              if (selection.nodeId) e.currentTarget.style.background = '#e3eaf5';
-            }}
-            onMouseUp={e => {
-              if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
-            }}
+            onClick={handleLoad}
+            title="Open"
+            style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+            onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
+            onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
+            onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
+            onMouseUp={e => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
           >
-            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <LuType size={22} strokeWidth={2} color="#333" style={{ display: 'block', marginBottom: 0 }} />
-              <div style={{
-                width: 20,
-                height: 4,
-                background: defaultNodeColor,
-                borderRadius: 2,
-                marginTop: 2,
-                marginBottom: 0,
-                pointerEvents: 'none',
-              }} />
-            </span>
+            <LuFolderOpen size={22} stroke="#333" strokeWidth={2} color="inherit" />
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Open</span>
           </button>
+          <input
+            type="file"
+            accept=".cld,application/json"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          {/* Save */}
           <button
-            title="Pick node color"
-            style={{
-              ...menuBtnStyle,
-              marginLeft: 0,
-              borderTopLeftRadius: 0,
-              borderBottomLeftRadius: 0,
-              borderLeft: '1px solid #bbb',
-              padding: '6px 8px',
-              opacity: selection.nodeId ? 1 : 0.5,
-              pointerEvents: selection.nodeId ? 'auto' : 'none',
-              background: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              width: 28,
-              height: 36,
-              justifyContent: 'center',
-              transition: 'background 0.15s, box-shadow 0.15s',
-            }}
-            disabled={!selection.nodeId}
-            onClick={() => setNodeMenuOpen(open => !open)}
-            onMouseOver={e => {
-              if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
-              if (selection.nodeId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.background = '#fff';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-            onMouseDown={e => {
-              if (selection.nodeId) e.currentTarget.style.background = '#e3eaf5';
-            }}
-            onMouseUp={e => {
-              if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
-            }}
+            onClick={handleExport}
+            title="Save"
+            style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+            onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
+            onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
+            onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
+            onMouseUp={e => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
           >
-            <LuChevronDown size={14} strokeWidth={2} color="#333"  />
+            <LuSave size={22} stroke="#333" strokeWidth={2} color="inherit" />
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Save</span>
           </button>
-          {/* Context menu for node color */}
-          {nodeMenuOpen && selection.nodeId && (
-            <div
+          {/* Sync */}
+          <button
+            onClick={handleRefresh}
+            title="Sync"
+            style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+            onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
+            onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
+            onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
+            onMouseUp={e => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
+          >
+            <LuInfinity size={22} stroke="#333" strokeWidth={2} color="inherit" />
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Sync</span>
+          </button>
+          {/* Undo */}
+          <button
+            onClick={undo}
+            title="Undo"
+            style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+            onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
+            onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
+            onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
+            onMouseUp={e => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
+          >
+            <LuUndo2 size={22} stroke="#333" strokeWidth={2} color="inherit" />
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Undo</span>
+          </button>
+          {/* Redo */}
+          <button
+            onClick={redo}
+            title="Redo"
+            style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+            onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
+            onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
+            onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
+            onMouseUp={e => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
+          >
+            <LuRedo2 size={22} stroke="#333" strokeWidth={2} color="inherit" />
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Redo</span>
+          </button>
+          {/* Clear Canvas */}
+          <button
+            onClick={() => { useCLDStore.getState().clearAll(); }}
+            title="Clear Canvas"
+            style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+            onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
+            onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
+            onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
+            onMouseUp={e => { e.currentTarget.style.background = '#333'; e.currentTarget.style.color = '#fff'; }}
+          >
+            <LuEraser size={22} stroke="#333" strokeWidth={2} color="inherit" />
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Clear</span>
+          </button>
+          {/* T_color (node color split button) */}
+          <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'row', alignItems: 'flex-end', verticalAlign: 'top' }} ref={nodeBtnRef}>
+            <button
+              title="Apply node color"
               style={{
-                position: 'absolute',
-                top: 38,
-                left: 0,
+                ...menuBtnStyle,
+                marginRight: 0,
+                position: 'relative',
+                cursor: selection.nodeId ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                opacity: selection.nodeId ? 1 : 0.5,
+                pointerEvents: selection.nodeId ? 'auto' : 'none',
+                borderTopRightRadius: 0,
+                borderBottomRightRadius: 0,
+                borderRight: 'none',
+                paddingRight: 0,
                 background: '#fff',
-                border: '1px solid #bbb',
-                borderRadius: 8,
-                padding: 10,
-                zIndex: 2000,
-                boxShadow: '0 2px 8px #0002',
-                minWidth: 180,
-                display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
-                gap: 6,
+                width: 'auto',
+                height: 36,
+                transition: 'background 0.15s, box-shadow 0.15s',
               }}
-              onMouseLeave={() => setNodeMenuOpen(false)}
+              disabled={!selection.nodeId}
+              onClick={() => {
+                if (selection.nodeId) {
+                  useCLDStore.setState(state => ({
+                    nodes: state.nodes.map(n => n.id === selection.nodeId ? { ...n, color: defaultNodeColor } : n),
+                    history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
+                    future: [],
+                  }));
+                }
+              }}
+              onMouseOver={e => {
+                if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
+                if (selection.nodeId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              onMouseDown={e => {
+                if (selection.nodeId) e.currentTarget.style.background = '#e3eaf5';
+              }}
+              onMouseUp={e => {
+                if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
+              }}
             >
-              {STANDARD_COLORS.map(color => (
-                <button
-                  key={color}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 4,
-                    border: color === defaultNodeColor ? '2px solid #1976d2' : '1px solid #bbb',
-                    background: color,
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => {
-                    setDefaultNodeColor(color);
-                    // Apply to selected node
-                    if (selection.nodeId) {
-                      useCLDStore.setState(state => ({
-                        nodes: state.nodes.map(n => n.id === selection.nodeId ? { ...n, color } : n),
-                        history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
-                        future: [],
-                      }));
-                    }
-                    setNodeMenuOpen(false);
-                  }}
-                  title={color}
-                />
-              ))}
-              {/* More Colors... */}
-              <label style={{ gridColumn: 'span 7', marginTop: 6, cursor: 'pointer', textAlign: 'center', fontSize: 13, color: '#1976d2', fontWeight: 500 }}>
-                More Colors…
-                <input
-                  type="color"
-                  value={defaultNodeColor}
-                  onChange={e => {
-                    setDefaultNodeColor(e.target.value);
-                    // Apply to selected node
-                    if (selection.nodeId) {
-                      useCLDStore.setState(state => ({
-                        nodes: state.nodes.map(n => n.id === selection.nodeId ? { ...n, color: e.target.value } : n),
-                        history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
-                        future: [],
-                      }));
-                    }
-                    setNodeMenuOpen(false);
-                  }}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            </div>
-          )}
-        </div>
-        {/* Arrow_Color (arc color split button) */}
-        <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'row', alignItems: 'flex-end', verticalAlign: 'top' }} ref={arcBtnRef}>
-          <button
-            title="Apply arrow color"
-            style={{
-              ...menuBtnStyle,
-              marginRight: 0,
-              position: 'relative',
-              cursor: selection.arcId ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: selection.arcId ? 1 : 0.5,
-              pointerEvents: selection.arcId ? 'auto' : 'none',
-              borderTopRightRadius: 0,
-              borderBottomRightRadius: 0,
-              borderRight: 'none',
-              paddingRight: 0,
-              background: '#fff',
-              width: 36,
-              height: 36,
-              transition: 'background 0.15s, box-shadow 0.15s',
-            }}
-            disabled={!selection.arcId}
-            onClick={() => {
-              if (selection.arcId) {
-                useCLDStore.setState(state => ({
-                  arcs: state.arcs.map(a => a.id === selection.arcId ? { ...a, color: defaultArcColor } : a),
-                  history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
-                  future: [],
-                }));
-              }
-            }}
-            onMouseOver={e => {
-              if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
-              if (selection.arcId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.background = '#fff';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-            onMouseDown={e => {
-              if (selection.arcId) e.currentTarget.style.background = '#e3eaf5';
-            }}
-            onMouseUp={e => {
-              if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
-            }}
-          >
-            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <LuSpline size={22} color="#333" style={{ display: 'block', marginBottom: 0 }} />
-              <div style={{
-                width: 22,
-                height: 4,
-                background: defaultArcColor,
-                borderRadius: 2,
-                marginTop: 2,
-                marginBottom: 0,
-                pointerEvents: 'none',
-              }} />
-            </span>
-          </button>
-          <button
-            title="Pick arrow color"
-            style={{
-              ...menuBtnStyle,
-              marginLeft: 0,
-              borderTopLeftRadius: 0,
-              borderBottomLeftRadius: 0,
-              borderLeft: '1px solid #bbb',
-              padding: '6px 8px',
-              opacity: selection.arcId ? 1 : 0.5,
-              pointerEvents: selection.arcId ? 'auto' : 'none',
-              background: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              width: 28,
-              height: 36,
-              justifyContent: 'center',
-              transition: 'background 0.15s, box-shadow 0.15s',
-            }}
-            disabled={!selection.arcId}
-            onClick={() => setArcMenuOpen(open => !open)}
-            onMouseOver={e => {
-              if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
-              if (selection.arcId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.background = '#fff';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-            onMouseDown={e => {
-              if (selection.arcId) e.currentTarget.style.background = '#e3eaf5';
-            }}
-            onMouseUp={e => {
-              if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
-            }}
-          >
-            <LuChevronDown size={14} strokeWidth={2} color="#333"/>
-          </button>
-          {/* Context menu for arc color */}
-          {arcMenuOpen && selection.arcId && (
-            <div
+              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <LuType size={22} strokeWidth={2} color="#333" style={{ display: 'block', marginBottom: 0 }} />
+                <div style={{
+                  width: 20,
+                  height: 4,
+                  background: defaultNodeColor,
+                  borderRadius: 2,
+                  marginTop: 2,
+                  marginBottom: 0,
+                  pointerEvents: 'none',
+                }} />
+              </span>
+              <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Node Color</span>
+            </button>
+            <button
+              title="Pick node color"
               style={{
-                position: 'absolute',
-                top: 38,
-                left: 0,
+                ...menuBtnStyle,
+                marginLeft: 0,
+                borderTopLeftRadius: 0,
+                borderBottomLeftRadius: 0,
+                padding: '6px 8px',
+                opacity: selection.nodeId ? 1 : 0.5,
+                pointerEvents: selection.nodeId ? 'auto' : 'none',
                 background: '#fff',
-                border: '1px solid #bbb',
-                borderRadius: 8,
-                padding: 10,
-                zIndex: 2000,
-                boxShadow: '0 2px 8px #0002',
-                minWidth: 180,
-                display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
-                gap: 6,
+                display: 'flex',
+                alignItems: 'center',
+                width: 28,
+                height: 36,
+                justifyContent: 'center',
+                transition: 'background 0.15s, box-shadow 0.15s',
               }}
-              onMouseLeave={() => setArcMenuOpen(false)}
+              disabled={!selection.nodeId}
+              onClick={() => setNodeMenuOpen(open => !open)}
+              onMouseOver={e => {
+                if (selection.nodeId) e.currentTarget.style.background = '#cfcfcf';
+                if (selection.nodeId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              onMouseDown={e => {
+                if (selection.nodeId) e.currentTarget.style.background = '#e3eaf5';
+              }}
+              onMouseUp={e => {
+                if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
+              }}
             >
-              {STANDARD_COLORS.map(color => (
-                <button
-                  key={color}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 4,
-                    border: color === defaultArcColor ? '2px solid #1976d2' : '1px solid #bbb',
-                    background: color,
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => {
-                    setDefaultArcColor(color);
-                    // Apply to selected arc
-                    if (selection.arcId) {
-                      useCLDStore.setState(state => ({
-                        arcs: state.arcs.map(a => a.id === selection.arcId ? { ...a, color } : a),
-                        history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
-                        future: [],
-                      }));
-                    }
-                    setArcMenuOpen(false);
-                  }}
-                  title={color}
-                />
-              ))}
-              {/* More Colors... */}
-              <label style={{ gridColumn: 'span 7', marginTop: 6, cursor: 'pointer', textAlign: 'center', fontSize: 13, color: '#1976d2', fontWeight: 500 }}>
-                More Colors…
-                <input
-                  type="color"
-                  value={defaultArcColor}
-                  onChange={e => {
-                    setDefaultArcColor(e.target.value);
-                    // Apply to selected arc
-                    if (selection.arcId) {
-                      useCLDStore.setState(state => ({
-                        arcs: state.arcs.map(a => a.id === selection.arcId ? { ...a, color: e.target.value } : a),
-                        history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
-                        future: [],
-                      }));
-                    }
-                    setArcMenuOpen(false);
-                  }}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            </div>
-          )}
+              <LuChevronDown size={14} strokeWidth={2} color="#333"  />
+            </button>
+            {/* Context menu for node color */}
+            {nodeMenuOpen && selection.nodeId && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 38,
+                  left: 0,
+                  background: '#fff',
+                  border: '1px solid #bbb',
+                  borderRadius: 8,
+                  padding: 10,
+                  zIndex: 2000,
+                  boxShadow: '0 2px 8px #0002',
+                  minWidth: 180,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: 6,
+                }}
+                onMouseLeave={() => setNodeMenuOpen(false)}
+              >
+                {STANDARD_COLORS.map(color => (
+                  <button
+                    key={color}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 4,
+                      border: color === defaultNodeColor ? '2px solid #1976d2' : '1px solid #bbb',
+                      background: color,
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => {
+                      setDefaultNodeColor(color);
+                      // Apply to selected node
+                      if (selection.nodeId) {
+                        useCLDStore.setState(state => ({
+                          nodes: state.nodes.map(n => n.id === selection.nodeId ? { ...n, color } : n),
+                          history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
+                          future: [],
+                        }));
+                      }
+                      setNodeMenuOpen(false);
+                    }}
+                    title={color}
+                  />
+                ))}
+                {/* More Colors... */}
+                <label style={{ gridColumn: 'span 7', marginTop: 6, cursor: 'pointer', textAlign: 'center', fontSize: 13, color: '#1976d2', fontWeight: 500 }}>
+                  More Colors…
+                  <input
+                    type="color"
+                    value={defaultNodeColor}
+                    onChange={e => {
+                      setDefaultNodeColor(e.target.value);
+                      // Apply to selected node
+                      if (selection.nodeId) {
+                        useCLDStore.setState(state => ({
+                          nodes: state.nodes.map(n => n.id === selection.nodeId ? { ...n, color: e.target.value } : n),
+                          history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
+                          future: [],
+                        }));
+                      }
+                      setNodeMenuOpen(false);
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+          {/* Arrow_Color (arc color split button) */}
+          <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'row', alignItems: 'flex-end', verticalAlign: 'top' }} ref={arcBtnRef}>
+            <button
+              title="Apply arrow color"
+              style={{
+                ...menuBtnStyle,
+                marginRight: 0,
+                position: 'relative',
+                cursor: selection.arcId ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                opacity: selection.arcId ? 1 : 0.5,
+                pointerEvents: selection.arcId ? 'auto' : 'none',
+                borderTopRightRadius: 0,
+                borderBottomRightRadius: 0,
+                borderRight: 'none',
+                paddingRight: 0,
+                background: '#fff',
+                width: 'auto',
+                height: 36,
+                transition: 'background 0.15s, box-shadow 0.15s',
+              }}
+              disabled={!selection.arcId}
+              onClick={() => {
+                if (selection.arcId) {
+                  useCLDStore.setState(state => ({
+                    arcs: state.arcs.map(a => a.id === selection.arcId ? { ...a, color: defaultArcColor } : a),
+                    history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
+                    future: [],
+                  }));
+                }
+              }}
+              onMouseOver={e => {
+                if (selection.arcId) e.currentTarget.style.background = '#cfcfcf';
+                if (selection.arcId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              onMouseDown={e => {
+                if (selection.arcId) e.currentTarget.style.background = '#e3eaf5';
+              }}
+              onMouseUp={e => {
+                if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
+              }}
+            >
+              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <LuSpline size={22} color="#333" style={{ display: 'block', marginBottom: 0 }} />
+                <div style={{
+                  width: 22,
+                  height: 4,
+                  background: defaultArcColor,
+                  borderRadius: 2,
+                  marginTop: 2,
+                  marginBottom: 0,
+                  pointerEvents: 'none',
+                }} />
+              </span>
+              <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Arrow Color</span>
+            </button>
+            <button
+              title="Pick arrow color"
+              style={{
+                ...menuBtnStyle,
+                marginLeft: 0,
+                borderTopLeftRadius: 0,
+                borderBottomLeftRadius: 0,
+                padding: '6px 8px',
+                opacity: selection.arcId ? 1 : 0.5,
+                pointerEvents: selection.arcId ? 'auto' : 'none',
+                background: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                width: 28,
+                height: 36,
+                justifyContent: 'center',
+                transition: 'background 0.15s, box-shadow 0.15s',
+              }}
+              disabled={!selection.arcId}
+              onClick={() => setArcMenuOpen(open => !open)}
+              onMouseOver={e => {
+                if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
+                if (selection.arcId) e.currentTarget.style.boxShadow = '0 2px 8px #1976d222';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              onMouseDown={e => {
+                if (selection.arcId) e.currentTarget.style.background = '#e3eaf5';
+              }}
+              onMouseUp={e => {
+                if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
+              }}
+            >
+              <LuChevronDown size={14} strokeWidth={2} color="#333"/>
+            </button>
+            {/* Context menu for arc color */}
+            {arcMenuOpen && selection.arcId && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 38,
+                  left: 0,
+                  background: '#fff',
+                  border: '1px solid #bbb',
+                  borderRadius: 8,
+                  padding: 10,
+                  zIndex: 2000,
+                  boxShadow: '0 2px 8px #0002',
+                  minWidth: 180,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: 6,
+                }}
+                onMouseLeave={() => setArcMenuOpen(false)}
+              >
+                {STANDARD_COLORS.map(color => (
+                  <button
+                    key={color}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 4,
+                      border: color === defaultArcColor ? '2px solid #1976d2' : '1px solid #bbb',
+                      background: color,
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => {
+                      setDefaultArcColor(color);
+                      // Apply to selected arc
+                      if (selection.arcId) {
+                        useCLDStore.setState(state => ({
+                          arcs: state.arcs.map(a => a.id === selection.arcId ? { ...a, color } : a),
+                          history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
+                          future: [],
+                        }));
+                      }
+                      setArcMenuOpen(false);
+                    }}
+                    title={color}
+                  />
+                ))}
+                {/* More Colors... */}
+                <label style={{ gridColumn: 'span 7', marginTop: 6, cursor: 'pointer', textAlign: 'center', fontSize: 13, color: '#1976d2', fontWeight: 500 }}>
+                  More Colors…
+                  <input
+                    type="color"
+                    value={defaultArcColor}
+                    onChange={e => {
+                      setDefaultArcColor(e.target.value);
+                      // Apply to selected arc
+                      if (selection.arcId) {
+                        useCLDStore.setState(state => ({
+                          arcs: state.arcs.map(a => a.id === selection.arcId ? { ...a, color: e.target.value } : a),
+                          history: [...state.history, { nodes: state.nodes, arcs: state.arcs }],
+                          future: [],
+                        }));
+                      }
+                      setArcMenuOpen(false);
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      {/* Tab bar */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #ddd', background: '#f5f5f5', alignItems: 'center' }}>
-        <button
-          onClick={() => setTab('canvas')}
-          style={{
-            padding: '12px 32px',
-            border: 'none',
-            borderBottom: tab === 'canvas' ? '3px solid #1976d2' : '3px solid transparent',
-            background: 'none',
-            fontWeight: 600,
-            color: tab === 'canvas' ? '#1976d2' : '#333',
-            cursor: 'pointer',
-            outline: 'none',
-            fontSize: 18,
-          }}
-        >
-          Canvas
-        </button>
-        <button
-          onClick={() => setTab('analysis')}
-          style={{
-            padding: '12px 32px',
-            border: 'none',
-            borderBottom: tab === 'analysis' ? '3px solid #1976d2' : '3px solid transparent',
-            background: 'none',
-            fontWeight: 600,
-            color: tab === 'analysis' ? '#1976d2' : '#333',
-            cursor: 'pointer',
-            outline: 'none',
-            fontSize: 18,
-          }}
-        >
-          Analysis
-        </button>
+        {/* End icon button group */}
+        {/* Canvas/Analysis tab buttons in menu bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginLeft: 32 }}>
+          <button
+            onClick={() => setTab('canvas')}
+            style={{
+              padding: '10px 28px',
+              border: 'none',
+              borderBottom: tab === 'canvas' ? '3px solid #1976d2' : '3px solid transparent',
+              background: 'none',
+              fontWeight: 600,
+              color: tab === 'canvas' ? '#1976d2' : '#333',
+              cursor: 'pointer',
+              outline: 'none',
+              fontSize: 17,
+              transition: 'color 0.15s, border-bottom 0.15s, background 0.15s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+            onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.color = '#1976d2'; }}
+            onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = tab === 'canvas' ? '#1976d2' : '#333'; }}
+          >
+            <LuLayout size={20} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+            Canvas
+          </button>
+          <button
+            onClick={() => setTab('analysis')}
+            style={{
+              padding: '10px 28px',
+              border: 'none',
+              borderBottom: tab === 'analysis' ? '3px solid #1976d2' : '3px solid transparent',
+              background: 'none',
+              fontWeight: 600,
+              color: tab === 'analysis' ? '#1976d2' : '#333',
+              cursor: 'pointer',
+              outline: 'none',
+              fontSize: 17,
+              transition: 'color 0.15s, border-bottom 0.15s, background 0.15s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+            onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.color = '#1976d2'; }}
+            onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = tab === 'analysis' ? '#1976d2' : '#333'; }}
+          >
+            <LuBarChart size={20} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+            Analysis
+          </button>
+        </div>
       </div>
       {/* Tab content */}
       <div style={{ flex: 1, minHeight: 0, minWidth: 0 }}>
@@ -788,11 +809,11 @@ const menuBtnStyle: React.CSSProperties = {
   border: 'none',
   color: '#1976d2',
   fontSize: 22,
-  marginRight: 16,
+  // marginRight: 16, // Removed for flex gap
   cursor: 'pointer',
   padding: 6,
   borderRadius: 4,
-  transition: 'background 0.15s, box-shadow 0.15s',
+  transition: 'background 0.15s, box-shadow 0.15s, color 0.15s',
 };
 
 export default App;
