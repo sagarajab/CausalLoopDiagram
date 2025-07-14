@@ -10,6 +10,7 @@ const NODE_RADIUS = 32;
 const HANDLE_RADIUS = 8;
 const DRAG_THRESHOLD = 4; // px
 const ARROWHEAD_LENGTH = 12;
+const MIN_CURVATURE = 20; // Minimum allowed absolute curvature for arcs
 
 type Point = { x: number; y: number };
 
@@ -809,10 +810,12 @@ const Canvas: React.FC = () => {
           const dy = to.y - from.y;
           const len = Math.sqrt(dx * dx + dy * dy);
           const maxCurvature = (len / 2) - 1e-3;
-          let clampedCurvature = Math.max(Math.min(curvature, maxCurvature), -maxCurvature);
-          // Clamp so sign never flips
-          if (arc.curvatureSign > 0) clampedCurvature = Math.max(clampedCurvature, 0.1);
-          else clampedCurvature = Math.min(clampedCurvature, -0.1);
+          // Clamp curvature to [-maxCurvature, maxCurvature]
+          let clampedCurvature = Math.max(-maxCurvature, Math.min(curvature, maxCurvature));
+          // Enforce minimum absolute curvature (prevent straight line)
+          if (Math.abs(clampedCurvature) < MIN_CURVATURE) {
+            clampedCurvature = MIN_CURVATURE * Math.sign(clampedCurvature || 1);
+          }
           setArcDrag({ arcId: arc.id, curvature: clampedCurvature });
         }
       }
