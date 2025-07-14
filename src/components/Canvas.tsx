@@ -497,7 +497,7 @@ const Canvas: React.FC = () => {
   }, [editingNodeId]);
 
   // Dev mode toggle
-  const [devMode, setDevMode] = useState(true);
+  const [devMode, setDevMode] = useState(false);
 
   // Delete selected node or arc on Delete key
   useEffect(() => {
@@ -986,10 +986,35 @@ const Canvas: React.FC = () => {
     pendingArcDragStart.current = { arc, from, to, startClientX: mouseClientX, startClientY: mouseClientY };
   }
 
+  // ... existing code ...
+  const [filename, setFilename] = useState('Untitled');
+  // ... existing code ...
+
   // --- Layout: left column for boxes, right for SVG ---
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', flexDirection: 'row', height: '100%', width: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* FileName Box at the top left */}
+      <div
+        style={{
+          width: 370, // matches the left column width + padding
+          background: '#eaeaea',
+          borderBottom: '2px solid #bbb',
+          fontWeight: 700,
+          fontSize: 32,
+          padding: '8px 0 8px 18px',
+          letterSpacing: 0.5,
+          color: '#222',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: 20,
+          boxSizing: 'border-box',
+          userSelect: 'none',
+        }}
+      >
+        {filename}.cld
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'row', height: '100%', width: '100%', minHeight: 0, overflow: 'hidden', marginTop: 48 }}>
         {/* Left column: Problem statement and loops */}
         <div style={{ width: 320, minWidth: 220, maxWidth: 400, background: '#f8f9fa', borderRight: '1px solid #e0e0e0', padding: 20, display: 'flex', flexDirection: 'column', gap: 24, minHeight: 0, overflow: 'hidden' }}>
           {/* Problem Statement Box */}
@@ -1511,7 +1536,7 @@ const Canvas: React.FC = () => {
         minHeight: 36,
       }}>
         <span>
-          <b>{numVariables}</b> variable{numVariables !== 1 ? 's' : ''} | <b>{numConnections}</b> connection{numConnections !== 1 ? 's' : ''} | <b>{numLoops}</b> loop{numLoops !== 1 ? 's' : ''}
+          <b>{filename}</b> | <b>{numVariables}</b> variable{numVariables !== 1 ? 's' : ''} | <b>{numConnections}</b> connection{numConnections !== 1 ? 's' : ''} | <b>{numLoops}</b> loop{numLoops !== 1 ? 's' : ''}
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
           {highlightedLoop && highlightedLoop.id && highlightedLoop.type ? (

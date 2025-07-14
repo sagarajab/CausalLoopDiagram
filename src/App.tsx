@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Canvas from './components/Canvas';
 import { useCLDStore } from './state/cldStore';
-import { FaUndo, FaRedo, FaSync, FaFileImport, FaFileExport, FaPalette, FaChevronDown, FaLongArrowAltRight } from 'react-icons/fa';
+import { FaUndo, FaRedo, FaSync, FaFolderOpen, FaSave, FaPalette, FaChevronDown, FaLongArrowAltRight } from 'react-icons/fa';
 import { MdTextFields } from 'react-icons/md';
 
 const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
@@ -120,17 +120,80 @@ const App: React.FC = () => {
   const nodeBtnRef = React.useRef<HTMLDivElement>(null);
   const arcBtnRef = React.useRef<HTMLDivElement>(null);
   const arcDragStart = React.useRef<null | { arcId: string, mx: number, my: number, nx: number, ny: number, sign: number }>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const handleRefresh = () => {
     setRefreshKey(k => k + 1);
   };
 
-  // Placeholder handlers for load/export
-  const handleLoad = () => {
-    alert('Load functionality not implemented yet.');
-  };
+  // Export diagram as .cld file
   const handleExport = () => {
-    alert('Export functionality not implemented yet.');
+    const data = {
+      version: 1,
+      nodes,
+      arcs,
+      defaultNodeColor,
+      defaultArcColor,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'diagram.cld';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 0);
+  };
+
+  // Import diagram from .cld file
+  const handleLoad = () => {
+    setImportError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImportError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.cld')) {
+      setImportError('File must have .cld extension.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const data = JSON.parse(text);
+        if (typeof data !== 'object' || data.version !== 1 || !Array.isArray(data.nodes) || !Array.isArray(data.arcs)) {
+          setImportError('Invalid or unsupported .cld file.');
+          return;
+        }
+        // Optionally validate node and arc structure here
+        useCLDStore.setState(state => ({
+          nodes: data.nodes,
+          arcs: data.arcs,
+          selection: {},
+          history: [],
+          future: [],
+          nodeCounter: data.nodes.reduce((max: number, n: {id: string}) => Math.max(max, Number(n.id)), 0) + 1,
+          arcCounter: data.arcs.reduce((max: number, a: {id: string}) => Math.max(max, Number(a.id)), 0) + 1,
+          defaultNodeColor: data.defaultNodeColor || '#222',
+          defaultArcColor: data.defaultArcColor || '#888',
+        }));
+        setTab('canvas');
+        setRefreshKey(k => k + 1);
+      } catch (err) {
+        setImportError('Failed to parse .cld file.');
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Get current color for selected node/arc
@@ -193,22 +256,29 @@ const App: React.FC = () => {
         ><FaRedo size={22} /></button>
         <button
           onClick={handleLoad}
-          title="Load"
+          title="Open"
           style={menuBtnStyle}
           onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
           onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
           onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
           onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        ><FaFileImport size={22} /></button>
+        ><FaFolderOpen size={22} /></button>
+        <input
+          type="file"
+          accept=".cld,application/json"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
         <button
           onClick={handleExport}
-          title="Export"
+          title="Save"
           style={menuBtnStyle}
           onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
           onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
           onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
           onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
-        ><FaFileExport size={22} /></button>
+        ><FaSave size={22} /></button>
         <button
           onClick={handleRefresh}
           title="Sync"
@@ -598,6 +668,9 @@ const App: React.FC = () => {
       <div style={{ flex: 1, minHeight: 0, minWidth: 0 }}>
         {tab === 'canvas' ? <Canvas key={refreshKey} /> : <Analysis refreshKey={refreshKey} />}
       </div>
+      {importError && (
+        <span style={{ color: '#d32f2f', marginLeft: 18, fontWeight: 500, fontSize: 15 }}>{importError}</span>
+      )}
     </div>
   );
 };
