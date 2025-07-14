@@ -1127,6 +1127,11 @@ const Canvas: React.FC = () => {
             const midArcY = refCircle.cy + refCircle.r * Math.sin(midArcAngle);
             const arcLabelX = refCircle.cx + refCircle.r * Math.cos(midArcAngle);
             const arcLabelY = refCircle.cy + refCircle.r * Math.sin(midArcAngle);
+            // --- Dynamic SIGN_T calculation ---
+            const SIGN_DIST = 20; // px, desired distance from arrowhead
+            const arcLength = refCircle.r * Math.abs(delta);
+            let SIGN_T = 1 - (SIGN_DIST / arcLength);
+            SIGN_T = Math.max(0, Math.min(1, SIGN_T)); // Clamp to [0, 1]
             const isHovered = hoveredArcId === arc.id;
             const isSelected = selection.arcId === arc.id;
             let arcStroke = arc.color;
@@ -1184,7 +1189,6 @@ const Canvas: React.FC = () => {
                 <g>
                   <circle
                     cx={(() => {
-                      const SIGN_T = 0.9;
                       const SIGN_PERP = 10;
                       const signAngle = startAngle + SIGN_T * delta;
                       const arcX = refCircle.cx + refCircle.r * Math.cos(signAngle);
@@ -1194,7 +1198,6 @@ const Canvas: React.FC = () => {
                       return arcX + perpX * SIGN_PERP;
                     })()}
                     cy={(() => {
-                      const SIGN_T = 0.9;
                       const SIGN_PERP = 10;
                       const signAngle = startAngle + SIGN_T * delta;
                       const arcY = refCircle.cy + refCircle.r * Math.sin(signAngle);
@@ -1210,7 +1213,6 @@ const Canvas: React.FC = () => {
                   />
                   <text
                     x={(() => {
-                      const SIGN_T = 0.9;
                       const SIGN_PERP = 10;
                       const signAngle = startAngle + SIGN_T * delta;
                       const arcX = refCircle.cx + refCircle.r * Math.cos(signAngle);
@@ -1220,7 +1222,6 @@ const Canvas: React.FC = () => {
                       return arcX + perpX * SIGN_PERP;
                     })()}
                     y={(() => {
-                      const SIGN_T = 0.9;
                       const SIGN_PERP = 10;
                       const signAngle = startAngle + SIGN_T * delta;
                       const arcY = refCircle.cy + refCircle.r * Math.sin(signAngle);
@@ -1244,7 +1245,6 @@ const Canvas: React.FC = () => {
                 {devMode && (
                   <circle
                     cx={(() => {
-                      const SIGN_T = 0.9;
                       const SIGN_PERP = 10;
                       const signAngle = startAngle + SIGN_T * delta;
                       const arcX = refCircle.cx + refCircle.r * Math.cos(signAngle);
@@ -1254,7 +1254,6 @@ const Canvas: React.FC = () => {
                       return arcX + perpX * SIGN_PERP;
                     })()}
                     cy={(() => {
-                      const SIGN_T = 0.9;
                       const SIGN_PERP = 10;
                       const signAngle = startAngle + SIGN_T * delta;
                       const arcY = refCircle.cy + refCircle.r * Math.sin(signAngle);
