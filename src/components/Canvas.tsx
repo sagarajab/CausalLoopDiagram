@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useCLDStore } from '../state/cldStore';
 import type { CLDState } from '../state/cldStore';
-import type { NodeType } from '../state/cldStore';
-import type { ArcType } from '../state/cldStore';
+import type { NodeType, ArcType } from '../types';
 // At the top of the file, add a global style block for layout fixes:
 import './globalLayoutFix.css';
 

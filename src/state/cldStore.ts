@@ -1,27 +1,5 @@
 import { StoreApi, UseBoundStore, create } from 'zustand';
-
-export type NodeType = {
-  id: string;
-  x: number;
-  y: number;
-  label: string;
-  color: string;
-};
-
-export type ArcType = {
-  id: string;
-  from: string;
-  to: string;
-  sign: '+' | '-';
-  color: string;
-  curvature: number;
-  curvatureSign: 1 | -1; // always 1 for now
-};
-
-export type SelectionType = {
-  nodeId?: string;
-  arcId?: string;
-};
+import { NodeType, ArcType, SelectionType } from '../types';
 
 export type CLDState = {
   nodes: NodeType[];

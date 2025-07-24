@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import Canvas from './components/Canvas';
+import { Canvas } from './components/canvas/Canvas';
 import { useCLDStore } from './state/cldStore';
 import { LuUndo2 , LuRedo2 , LuInfinity , LuFolderOpen , LuSave, LuPalette, LuChevronDown, LuSpline, LuEraser, LuLayout, LuBarChart } from 'react-icons/lu';
 import { LuType  } from 'react-icons/lu';
