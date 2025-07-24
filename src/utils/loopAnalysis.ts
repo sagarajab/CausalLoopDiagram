@@ -1,7 +1,33 @@
 import { NodeType, ArcType, LoopType } from '../types';
 
+// Cache for loop analysis results
+const loopCache = new Map<string, LoopType[]>();
+const CACHE_SIZE_LIMIT = 100; // Limit cache size to prevent memory leaks
+
+// Generate cache key from nodes and arcs
+function generateCacheKey(nodes: NodeType[], arcs: ArcType[]): string {
+  const nodeIds = nodes.map(n => n.id).sort().join(',');
+  const arcIds = arcs.map(a => `${a.from}-${a.to}-${a.sign}`).sort().join(',');
+  return `${nodeIds}|${arcIds}`;
+}
+
+// Clear cache when it gets too large
+function clearCacheIfNeeded() {
+  if (loopCache.size > CACHE_SIZE_LIMIT) {
+    const entries = Array.from(loopCache.entries());
+    // Remove oldest entries
+    entries.slice(0, CACHE_SIZE_LIMIT / 2).forEach(([key]) => loopCache.delete(key));
+  }
+}
+
 // Johnson's algorithm for finding all simple cycles in a directed graph
 export function findAllSimpleCycles(nodes: NodeType[], arcs: ArcType[]): string[][] {
+  // Early termination for very large graphs to prevent performance issues
+  if (nodes.length > 100 || arcs.length > 200) {
+    console.warn('Graph too large for complete cycle detection, returning empty result');
+    return [];
+  }
+
   const adj: Record<string, { to: string; sign: string }[]> = {};
   nodes.forEach((n: NodeType) => { adj[n.id] = []; });
   arcs.forEach((a: ArcType) => { adj[a.from].push({ to: a.to, sign: a.sign }); });
@@ -101,26 +127,56 @@ export function classifyLoops(cycles: string[][], arcs: ArcType[]): LoopType[] {
     }
     
     return {
-      id: `L${i + 1}`,
+      id: `loop_${i}`,
       nodes: cyc,
+      type: product > 0 ? 'R' : product < 0 ? 'B' : '?',
       length: cyc.length,
-      type: product === 1 ? 'R' : product === -1 ? 'B' : '?',
     };
   });
 }
 
-// Get all loops with classification
+// Main function to get all loops with caching
 export function getAllLoops(nodes: NodeType[], arcs: ArcType[]): LoopType[] {
-  const cycles = findAllSimpleCycles(nodes, arcs);
-  return classifyLoops(cycles, arcs);
+  // Check cache first
+  const cacheKey = generateCacheKey(nodes, arcs);
+  if (loopCache.has(cacheKey)) {
+    return loopCache.get(cacheKey)!;
+  }
+
+  // Early termination for very large graphs
+  if (nodes.length > 100 || arcs.length > 200) {
+    console.warn('Graph too large for complete loop analysis, returning empty result');
+    const result: LoopType[] = [];
+    loopCache.set(cacheKey, result);
+    clearCacheIfNeeded();
+    return result;
+  }
+
+  try {
+    const cycles = findAllSimpleCycles(nodes, arcs);
+    const loops = classifyLoops(cycles, arcs);
+    
+    // Cache the result
+    loopCache.set(cacheKey, loops);
+    clearCacheIfNeeded();
+    
+    return loops;
+  } catch (error) {
+    console.error('Error in loop analysis:', error);
+    const result: LoopType[] = [];
+    loopCache.set(cacheKey, result);
+    clearCacheIfNeeded();
+    return result;
+  }
 }
 
 // Check if an arc is part of a specific loop
 export function isArcInLoop(arc: ArcType, loop: LoopType): boolean {
-  for (let i = 0; i < loop.nodes.length; ++i) {
-    const f = loop.nodes[i];
-    const t = loop.nodes[(i + 1) % loop.nodes.length];
-    if (arc.from === f && arc.to === t) {
+  const { nodes } = loop;
+  for (let i = 0; i < nodes.length; ++i) {
+    const from = nodes[i];
+    const to = nodes[(i + 1) % nodes.length];
+    if (arc.from === from && arc.to === to) {
       return true;
     }
   }
@@ -138,6 +194,10 @@ export function getLoopStats(loops: LoopType[]) {
     reinforcing,
     balancing,
     unknown,
-    averageLength: loops.length > 0 ? loops.reduce((sum, l) => sum + l.length, 0) / loops.length : 0
   };
+}
+
+// Clear the cache (useful for testing or memory management)
+export function clearLoopCache() {
+  loopCache.clear();
 } 

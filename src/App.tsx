@@ -1,12 +1,38 @@
 import React, { useState, useRef } from 'react';
 import { Canvas } from './components/canvas/Canvas';
 import { useCLDStore } from './state/cldStore';
-import { LuUndo2 , LuRedo2 , LuInfinity , LuFolderOpen , LuSave, LuPalette, LuChevronDown, LuSpline, LuEraser, LuLayout, LuBarChart } from 'react-icons/lu';
+import { LuUndo2 , LuRedo2 , LuFolderOpen , LuSave, LuPalette, LuChevronDown, LuSpline, LuEraser, LuLayout, LuBarChart, LuMenu } from 'react-icons/lu';
 import { LuType  } from 'react-icons/lu';
+
+// Responsive breakpoints
+const BREAKPOINTS = {
+  mobile: 768,
+  tablet: 1024,
+  desktop: 1200,
+};
+
+// Hook for responsive design
+const useResponsive = () => {
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  
+  React.useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  return {
+    isMobile: windowWidth < BREAKPOINTS.mobile,
+    isTablet: windowWidth >= BREAKPOINTS.mobile && windowWidth < BREAKPOINTS.tablet,
+    isDesktop: windowWidth >= BREAKPOINTS.tablet,
+    windowWidth,
+  };
+};
 
 const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
   const arcs = useCLDStore(state => state.arcs);
   const nodes = useCLDStore(state => state.nodes);
+  const { isMobile, isTablet } = useResponsive();
   const getNodeLabel = (id: string) => nodes.find(n => n.id === id)?.label || id;
 
   // Compute #input and #output for each node
@@ -19,55 +45,101 @@ const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
   // Use refreshKey to force re-render if needed
   React.useEffect(() => {}, [refreshKey]);
 
+  const containerStyle = {
+    padding: isMobile ? 16 : 32,
+    display: 'flex',
+    flexDirection: (isMobile ? 'column' : 'row') as 'column' | 'row',
+    alignItems: 'flex-start',
+    gap: isMobile ? 16 : 32,
+  };
+
+  const leftColumnStyle = {
+    minWidth: isMobile ? '100%' : 420,
+    flex: isMobile ? 'none' : '0 0 auto' as const,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: isMobile ? 16 : 24,
+    width: isMobile ? '100%' : 'auto',
+  };
+
+  const rightColumnStyle = {
+    minWidth: isMobile ? '100%' : 400,
+    flex: isMobile ? 'none' : '1 1 0' as const,
+    background: '#fafbfc',
+    borderRadius: 8,
+    boxShadow: '0 1px 4px #0001',
+    padding: 12,
+    maxHeight: isMobile ? 400 : 540,
+    overflow: 'auto',
+    width: isMobile ? '100%' : 'auto',
+  };
+
+  const tableContainerStyle = {
+    background: '#fafbfc',
+    borderRadius: 8,
+    boxShadow: '0 1px 4px #0001',
+    padding: 12,
+    maxHeight: isMobile ? 200 : 260,
+    overflow: 'auto',
+    marginBottom: 0,
+  };
+
+  const tableStyle = {
+    borderCollapse: 'collapse' as const,
+    minWidth: isMobile ? 300 : 400,
+    marginBottom: 0,
+    fontSize: isMobile ? 12 : 13,
+  };
+
   return (
-    <div style={{ padding: 32 }}>
-      <h2>Analysis</h2>
-      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 32 }}>
+    <div style={{ padding: isMobile ? 16 : 32 }}>
+      <h2 style={{ fontSize: isMobile ? 20 : 24, marginBottom: isMobile ? 16 : 24 }}>Analysis</h2>
+      <div style={containerStyle}>
         {/* Left column: Node Summary and Connections, stacked and scrollable */}
-        <div style={{ minWidth: 420, flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={leftColumnStyle}>
           {/* Node Summary Table Container */}
-          <div style={{ background: '#fafbfc', borderRadius: 8, boxShadow: '0 1px 4px #0001', padding: 12, maxHeight: 260, overflow: 'auto', marginBottom: 0 }}>
-            <h3 style={{ marginTop: 0 }}>Node Summary</h3>
-            <table style={{ borderCollapse: 'collapse', minWidth: 400, marginBottom: 0, fontSize: 13 }}>
+          <div style={tableContainerStyle}>
+            <h3 style={{ marginTop: 0, fontSize: isMobile ? 16 : 18 }}>Node Summary</h3>
+            <table style={tableStyle}>
               <thead>
                 <tr>
-                  <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5', fontSize: 13 }}>ID</th>
-                  <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5', fontSize: 13 }}>Name</th>
-                  <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5', fontSize: 13 }}># Input</th>
-                  <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5', fontSize: 13 }}># Output</th>
+                  <th style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', background: '#f5f5f5', fontSize: isMobile ? 12 : 13 }}>ID</th>
+                  <th style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', background: '#f5f5f5', fontSize: isMobile ? 12 : 13 }}>Name</th>
+                  <th style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', background: '#f5f5f5', fontSize: isMobile ? 12 : 13 }}># Input</th>
+                  <th style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', background: '#f5f5f5', fontSize: isMobile ? 12 : 13 }}># Output</th>
                 </tr>
               </thead>
               <tbody>
                 {nodeStats.map(node => (
                   <tr key={node.id}>
-                    <td style={{ border: '1px solid #bbb', padding: '6px 16px', fontSize: 13 }}>{node.id}</td>
-                    <td style={{ border: '1px solid #bbb', padding: '6px 16px', fontSize: 13 }}>{node.label}</td>
-                    <td style={{ border: '1px solid #bbb', padding: '6px 16px', textAlign: 'center', fontSize: 13 }}>{node.numInput}</td>
-                    <td style={{ border: '1px solid #bbb', padding: '6px 16px', textAlign: 'center', fontSize: 13 }}>{node.numOutput}</td>
+                    <td style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', fontSize: isMobile ? 12 : 13 }}>{node.id}</td>
+                    <td style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', fontSize: isMobile ? 12 : 13 }}>{node.label}</td>
+                    <td style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', textAlign: 'center', fontSize: isMobile ? 12 : 13 }}>{node.numInput}</td>
+                    <td style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', textAlign: 'center', fontSize: isMobile ? 12 : 13 }}>{node.numOutput}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           {/* Connections Table Container */}
-          <div style={{ background: '#fafbfc', borderRadius: 8, boxShadow: '0 1px 4px #0001', padding: 12, maxHeight: 260, overflow: 'auto' }}>
-            <h3 style={{ marginTop: 0 }}>Connections</h3>
-            <table style={{ borderCollapse: 'collapse', minWidth: 400, fontSize: 13 }}>
+          <div style={tableContainerStyle}>
+            <h3 style={{ marginTop: 0, fontSize: isMobile ? 16 : 18 }}>Connections</h3>
+            <table style={tableStyle}>
               <thead>
                 <tr>
-                  <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5', fontSize: 13 }}>ID</th>
-                  <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5', fontSize: 13 }}>From Node</th>
-                  <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5', fontSize: 13 }}>Sign</th>
-                  <th style={{ border: '1px solid #bbb', padding: '6px 16px', background: '#f5f5f5', fontSize: 13 }}>To Node</th>
+                  <th style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', background: '#f5f5f5', fontSize: isMobile ? 12 : 13 }}>ID</th>
+                  <th style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', background: '#f5f5f5', fontSize: isMobile ? 12 : 13 }}>From Node</th>
+                  <th style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', background: '#f5f5f5', fontSize: isMobile ? 12 : 13 }}>Sign</th>
+                  <th style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', background: '#f5f5f5', fontSize: isMobile ? 12 : 13 }}>To Node</th>
                 </tr>
               </thead>
               <tbody>
                 {arcs.map(arc => (
                   <tr key={arc.id}>
-                    <td style={{ border: '1px solid #bbb', padding: '6px 16px', fontSize: 13 }}>{arc.id}</td>
-                    <td style={{ border: '1px solid #bbb', padding: '6px 16px', fontSize: 13 }}>{`${getNodeLabel(arc.from)} (${arc.from})`}</td>
-                    <td style={{ border: '1px solid #bbb', padding: '6px 16px', textAlign: 'center', fontWeight: 'bold', color: arc.sign === '+' ? '#388e3c' : '#d32f2f', fontSize: 13 }}>{arc.sign}</td>
-                    <td style={{ border: '1px solid #bbb', padding: '6px 16px', fontSize: 13 }}>{`${getNodeLabel(arc.to)} (${arc.to})`}</td>
+                    <td style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', fontSize: isMobile ? 12 : 13 }}>{arc.id}</td>
+                    <td style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', fontSize: isMobile ? 12 : 13 }}>{`${getNodeLabel(arc.from)} (${arc.from})`}</td>
+                    <td style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', textAlign: 'center', fontWeight: 'bold', color: arc.sign === '+' ? '#388e3c' : '#d32f2f', fontSize: isMobile ? 12 : 13 }}>{arc.sign}</td>
+                    <td style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 16px', fontSize: isMobile ? 12 : 13 }}>{`${getNodeLabel(arc.to)} (${arc.to})`}</td>
                   </tr>
                 ))}
               </tbody>
@@ -75,25 +147,25 @@ const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
           </div>
         </div>
         {/* Right column: Adjacency Matrix in its own scrollable container */}
-        <div style={{ minWidth: 400, flex: '1 1 0', background: '#fafbfc', borderRadius: 8, boxShadow: '0 1px 4px #0001', padding: 12, maxHeight: 540, overflow: 'auto' }}>
-          <h3 style={{ marginTop: 0 }}>Adjacency Matrix</h3>
-          <table style={{ borderCollapse: 'collapse', minWidth: 400, fontSize: 13 }}>
+        <div style={rightColumnStyle}>
+          <h3 style={{ marginTop: 0, fontSize: isMobile ? 16 : 18 }}>Adjacency Matrix</h3>
+          <table style={tableStyle}>
             <thead>
               <tr>
                 {/* Top-left cell: sticky both top and left */}
-                <th style={{ border: '1px solid #bbb', padding: '6px 12px', background: '#f5f5f5', position: 'sticky', top: 0, left: 0, zIndex: 3, fontSize: 13 }}></th>
+                <th style={{ border: '1px solid #bbb', padding: isMobile ? '4px 8px' : '6px 12px', background: '#f5f5f5', position: 'sticky', top: 0, left: 0, zIndex: 3, fontSize: isMobile ? 12 : 13 }}></th>
                 {nodes.map(colNode => (
                   <th
                     key={colNode.id}
                     style={{
                       border: '1px solid #bbb',
-                      padding: '6px 12px',
+                      padding: isMobile ? '4px 8px' : '6px 12px',
                       background: '#f5f5f5',
                       textAlign: 'center',
                       position: 'sticky',
                       top: 0,
                       zIndex: 2,
-                      fontSize: 13,
+                      fontSize: isMobile ? 12 : 13,
                     }}
                   >
                     {getNodeLabel(colNode.id)}
@@ -108,13 +180,13 @@ const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
                   <th
                     style={{
                       border: '1px solid #bbb',
-                      padding: '6px 12px',
+                      padding: isMobile ? '4px 8px' : '6px 12px',
                       background: '#f5f5f5',
                       textAlign: 'right',
                       position: 'sticky',
                       left: 0,
                       zIndex: 1,
-                      fontSize: 13,
+                      fontSize: isMobile ? 12 : 13,
                     }}
                   >
                     {getNodeLabel(rowNode.id)}
@@ -126,12 +198,12 @@ const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
                         key={colNode.id}
                         style={{
                           border: '1px solid #bbb',
-                          padding: '6px 12px',
+                          padding: isMobile ? '4px 8px' : '6px 12px',
                           textAlign: 'center',
                           fontWeight: 'bold',
                           color: arc?.sign === '+' ? '#388e3c' : arc?.sign === '-' ? '#d32f2f' : '#888',
                           background: '#fff',
-                          fontSize: 13,
+                          fontSize: isMobile ? 12 : 13,
                         }}
                       >
                         {arc ? arc.sign : ''}
@@ -151,6 +223,9 @@ const Analysis: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
 const App: React.FC = () => {
   const [tab, setTab] = useState<'canvas' | 'analysis'>('canvas');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isMobile, isTablet } = useResponsive();
+  
   const undo = useCLDStore(state => state.undo);
   const redo = useCLDStore(state => state.redo);
   const selection = useCLDStore(state => state.selection);
@@ -174,9 +249,7 @@ const App: React.FC = () => {
   const filenameInputRef = useRef<HTMLInputElement>(null);
   const FILENAME_BOX_WIDTH = 250;
 
-  const handleRefresh = () => {
-    setRefreshKey(k => k + 1);
-  };
+
 
   // Export diagram as .cld file
   const handleExport = () => {
@@ -293,20 +366,50 @@ const App: React.FC = () => {
   return (
     <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, Segoe UI, Arial, sans-serif' }}>
       {/* Title bar for filename */}
-      <div style={{ width: '100%', background: '#212121', borderBottom: '1px solid rgb(36, 36, 36)', padding: '10px 32px', display: 'flex', alignItems: 'center', minHeight: 20, justifyContent: 'space-between' }}>
+      <div style={{ 
+        width: '100%', 
+        background: '#212121', 
+        borderBottom: '1px solid rgb(36, 36, 36)', 
+        padding: isMobile ? '8px 16px' : '10px 32px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        minHeight: 20, 
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 8
+      }}>
         {/* Left: App icon and name */}
-        <div style={{ display: 'flex', alignItems: 'center', height: 38, position: 'relative', gap: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', height: 38, position: 'relative', gap: isMobile ? 12 : 18 }}>
           {/* App Icon Placeholder replaced with actual logo */}
           <img
             src={require('./assets/sysloop.png')}
             alt="SysLoop Logo"
-            style={{ maxWidth: 34, maxHeight: 34, marginRight: 10, background: 'transparent', display: 'inline-block' }}
+            style={{ 
+              maxWidth: isMobile ? 28 : 34, 
+              maxHeight: isMobile ? 28 : 34, 
+              marginRight: isMobile ? 8 : 10, 
+              background: 'transparent', 
+              display: 'inline-block' 
+            }}
           />
           {/* App Name */}
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#fff', letterSpacing: 1, marginRight: 10, userSelect: 'none' }}>SysLoop</span>
+          <span style={{ 
+            fontWeight: 700, 
+            fontSize: isMobile ? 12 : 14, 
+            color: '#fff', 
+            letterSpacing: 1, 
+            marginRight: isMobile ? 8 : 10, 
+            userSelect: 'none' 
+          }}>SysLoop</span>
         </div>
         {/* Right: Filename pill and logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: isMobile ? 12 : 18,
+          flexWrap: 'wrap',
+          justifyContent: 'flex-end'
+        }}>
           {/* Filename pill */}
           {editingFilename ? (
             <input
@@ -328,14 +431,14 @@ const App: React.FC = () => {
               }}
               style={{
                 fontWeight: 500,
-                fontSize: 14,
+                fontSize: isMobile ? 12 : 14,
                 color: '#222',
-                width: 340,
+                width: isMobile ? 200 : 340,
                 userSelect: 'none',
                 letterSpacing: 0.5,
                 border: 'none',
                 borderRadius: 999,
-                padding: '6px 32px',
+                padding: isMobile ? '4px 16px' : '6px 32px',
                 outline: 'none',
                 background: '#ffbc1f',
                 boxSizing: 'border-box',
@@ -355,9 +458,9 @@ const App: React.FC = () => {
             <span
               style={{
                 fontWeight: 500,
-                fontSize: 14,
+                fontSize: isMobile ? 12 : 14,
                 color: '#222',
-                width: 340,
+                width: isMobile ? 200 : 340,
                 userSelect: 'none',
                 letterSpacing: 0.5,
                 cursor: 'pointer',
@@ -366,7 +469,7 @@ const App: React.FC = () => {
                 whiteSpace: 'nowrap',
                 boxSizing: 'border-box',
                 transition: 'none',
-                padding: '6px 32px',
+                padding: isMobile ? '4px 16px' : '6px 32px',
                 borderRadius: 999,
                 background: '#ffbc1f',
                 marginLeft: 0,
@@ -385,31 +488,70 @@ const App: React.FC = () => {
               {filename}
             </span>
           }
-          <img
-            src={require('./assets/TBT.png')}
-            alt="Logo"
-            style={{ height: 36, maxWidth: 120, objectFit: 'contain', marginLeft: 32, paddingRight:50 }}
-          />
+          {!isMobile && (
+            <img
+              src={require('./assets/TBT.png')}
+              alt="Logo"
+              style={{ height: 36, maxWidth: 120, objectFit: 'contain', marginLeft: 32, paddingRight: 50 }}
+            />
+          )}
         </div>
       </div>
       {/* Menu bar */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#fff', position: 'relative', fontFamily: 'Inter, Segoe UI, Arial, sans-serif' }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        padding: isMobile ? '4px 8px' : '8px 16px', 
+        background: '#fff', 
+        position: 'relative', 
+        fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
+        flexWrap: 'wrap',
+        gap: isMobile ? 4 : 8
+      }}>
         {/* Menu bar content: icon group left, tab buttons right */}
-        <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-          {/* Icon button group */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flex: 1, flexWrap: 'wrap', gap: isMobile ? 8 : 12 }}>
+          {/* Mobile menu button */}
+          {isMobile && (
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              title="Menu"
+              style={{ 
+                ...menuBtnStyle, 
+                display: 'flex', 
+                alignItems: 'center',
+                padding: '8px',
+                marginRight: 8
+              }}
+            >
+              <LuMenu size={20} stroke="#333" strokeWidth={2} />
+            </button>
+          )}
+          
+          {/* File operations group */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: isMobile ? 8 : 12,
+            flexWrap: 'wrap',
+            ...(isMobile && !mobileMenuOpen && { display: 'none' })
+          }}>
             {/* Open */}
             <button
               onClick={handleLoad}
               title="Open"
-              style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+              style={{ 
+                ...menuBtnStyle, 
+                display: 'flex', 
+                alignItems: 'center',
+                padding: isMobile ? '6px 8px' : 6
+              }}
               onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
               onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
               onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
               onMouseUp={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1976d2'; }}
             >
-              <LuFolderOpen size={22} stroke="#333" strokeWidth={2} color="inherit" />
-              <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Open</span>
+              <LuFolderOpen size={isMobile ? 18 : 22} stroke="#333" strokeWidth={2} color="inherit" />
+
             </button>
             <input
               type="file"
@@ -422,67 +564,95 @@ const App: React.FC = () => {
             <button
               onClick={handleExport}
               title="Save"
-              style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+              style={{ 
+                ...menuBtnStyle, 
+                display: 'flex', 
+                alignItems: 'center',
+                padding: isMobile ? '6px 8px' : 6
+              }}
               onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
               onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
               onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
               onMouseUp={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1976d2'; }}
             >
-              <LuSave size={22} stroke="#333" strokeWidth={2} color="inherit" />
-              <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Save</span>
+              <LuSave size={isMobile ? 18 : 22} stroke="#333" strokeWidth={2} color="inherit" />
+
             </button>
-            {/* Sync */}
-            <button
-              onClick={handleRefresh}
-              title="Sync"
-              style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
-              onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
-              onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
-              onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
-              onMouseUp={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1976d2'; }}
-            >
-              <LuInfinity size={22} stroke="#333" strokeWidth={2} color="inherit" />
-              <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Sync</span>
-            </button>
+
+          </div>
+
+          {/* Edit operations group */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: isMobile ? 8 : 12,
+            flexWrap: 'wrap',
+            ...(isMobile && !mobileMenuOpen && { display: 'none' })
+          }}>
             {/* Undo */}
             <button
               onClick={undo}
               title="Undo"
-              style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+              style={{ 
+                ...menuBtnStyle, 
+                display: 'flex', 
+                alignItems: 'center',
+                padding: isMobile ? '6px 8px' : 6
+              }}
               onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
               onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
               onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
               onMouseUp={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1976d2'; }}
             >
-              <LuUndo2 size={22} stroke="#333" strokeWidth={2} color="inherit" />
-              <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Undo</span>
+              <LuUndo2 size={isMobile ? 18 : 22} stroke="#333" strokeWidth={2} color="inherit" />
+
             </button>
             {/* Redo */}
             <button
               onClick={redo}
               title="Redo"
-              style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+              style={{ 
+                ...menuBtnStyle, 
+                display: 'flex', 
+                alignItems: 'center',
+                padding: isMobile ? '6px 8px' : 6
+              }}
               onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
               onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
               onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
               onMouseUp={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1976d2'; }}
             >
-              <LuRedo2 size={22} stroke="#333" strokeWidth={2} color="inherit" />
-              <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Redo</span>
+              <LuRedo2 size={isMobile ? 18 : 22} stroke="#333" strokeWidth={2} color="inherit" />
+
             </button>
             {/* Clear Canvas */}
             <button
               onClick={() => { useCLDStore.getState().clearAll(); }}
               title="Clear Canvas"
-              style={{ ...menuBtnStyle, display: 'flex', alignItems: 'center' }}
+              style={{ 
+                ...menuBtnStyle, 
+                display: 'flex', 
+                alignItems: 'center',
+                padding: isMobile ? '6px 8px' : 6
+              }}
               onMouseOver={e => { e.currentTarget.style.background = '#cfcfcf'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; e.currentTarget.style.color = '#fff'; }}
               onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#1976d2'; }}
               onMouseDown={e => { e.currentTarget.style.background = '#999'; e.currentTarget.style.color = '#fff'; }}
               onMouseUp={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1976d2'; }}
             >
-              <LuEraser size={22} stroke="#333" strokeWidth={2} color="inherit" />
-              <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Clear</span>
+              <LuEraser size={isMobile ? 18 : 22} stroke="#333" strokeWidth={2} color="inherit" />
+
             </button>
+                    </div>
+
+          {/* Color tools group */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: isMobile ? 8 : 12,
+            flexWrap: 'wrap',
+            ...(isMobile && !mobileMenuOpen && { display: 'none' })
+          }}>
             {/* T_color (node color split button) */}
             <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'row', alignItems: 'flex-end', verticalAlign: 'top' }} ref={nodeBtnRef}>
               <button
@@ -532,7 +702,7 @@ const App: React.FC = () => {
                 }}
               >
                 <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <LuType size={22} strokeWidth={2} color="#333" style={{ display: 'block', marginBottom: 0 }} />
+                  <LuType size={isMobile ? 18 : 22} strokeWidth={2} color="#333" style={{ display: 'block', marginBottom: 0 }} />
                   <div style={{
                     width: 20,
                     height: 4,
@@ -543,7 +713,6 @@ const App: React.FC = () => {
                     pointerEvents: 'none',
                   }} />
                 </span>
-                <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Node Color</span>
               </button>
               <button
                 title="Pick node color"
@@ -701,7 +870,7 @@ const App: React.FC = () => {
                 }}
               >
                 <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <LuSpline size={22} color="#333" style={{ display: 'block', marginBottom: 0 }} />
+                  <LuSpline size={isMobile ? 18 : 22} color="#333" style={{ display: 'block', marginBottom: 0 }} />
                   <div style={{
                     width: 22,
                     height: 4,
@@ -712,7 +881,6 @@ const App: React.FC = () => {
                     pointerEvents: 'none',
                   }} />
                 </span>
-                <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: '#222', display: 'flex', alignItems: 'center' }}>Arrow Color</span>
               </button>
               <button
                 title="Pick arrow color"
@@ -825,11 +993,18 @@ const App: React.FC = () => {
           {/* Spacer to push tab buttons right */}
           <div style={{ flex: 1 }} />
           {/* Canvas/Analysis tab buttons right-aligned */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginLeft: 32, fontFamily: 'Inter, Segoe UI, Arial, sans-serif' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 0, 
+            marginLeft: isMobile ? 8 : 32, 
+            fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
+            flexWrap: 'wrap'
+          }}>
             <button
               onClick={() => setTab('canvas')}
               style={{
-                padding: '10px 28px',
+                padding: isMobile ? '8px 16px' : '10px 28px',
                 border: 'none',
                 borderBottom: tab === 'canvas' ? '3px solid #1976d2' : '3px solid transparent',
                 background: 'none',
@@ -837,22 +1012,22 @@ const App: React.FC = () => {
                 color: tab === 'canvas' ? '#1976d2' : '#333',
                 cursor: 'pointer',
                 outline: 'none',
-                fontSize: 17,
+                fontSize: isMobile ? 14 : 17,
                 transition: 'color 0.15s, border-bottom 0.15s, background 0.15s',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
+                gap: isMobile ? 4 : 8,
               }}
               onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.color = '#1976d2'; }}
               onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = tab === 'canvas' ? '#1976d2' : '#333'; }}
             >
-              <LuLayout size={20} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-              Canvas
+              <LuLayout size={isMobile ? 16 : 20} style={{ marginRight: isMobile ? 4 : 6, verticalAlign: 'middle' }} />
+
             </button>
             <button
               onClick={() => setTab('analysis')}
               style={{
-                padding: '10px 28px',
+                padding: isMobile ? '8px 16px' : '10px 28px',
                 border: 'none',
                 borderBottom: tab === 'analysis' ? '3px solid #1976d2' : '3px solid transparent',
                 background: 'none',
@@ -860,17 +1035,17 @@ const App: React.FC = () => {
                 color: tab === 'analysis' ? '#1976d2' : '#333',
                 cursor: 'pointer',
                 outline: 'none',
-                fontSize: 17,
+                fontSize: isMobile ? 14 : 17,
                 transition: 'color 0.15s, border-bottom 0.15s, background 0.15s',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
+                gap: isMobile ? 4 : 8,
               }}
               onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.color = '#1976d2'; }}
               onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = tab === 'analysis' ? '#1976d2' : '#333'; }}
             >
-              <LuBarChart size={20} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-              Analysis
+              <LuBarChart size={isMobile ? 16 : 20} style={{ marginRight: isMobile ? 4 : 6, verticalAlign: 'middle' }} />
+
             </button>
           </div>
         </div>
@@ -880,7 +1055,13 @@ const App: React.FC = () => {
         {tab === 'canvas' ? <Canvas key={refreshKey} /> : <Analysis refreshKey={refreshKey} />}
       </div>
       {importError && (
-        <span style={{ color: '#d32f2f', marginLeft: 18, fontWeight: 500, fontSize: 15 }}>{importError}</span>
+        <span style={{ 
+          color: '#d32f2f', 
+          marginLeft: isMobile ? 8 : 18, 
+          fontWeight: 500, 
+          fontSize: isMobile ? 13 : 15,
+          padding: isMobile ? '8px 16px' : '12px 24px'
+        }}>{importError}</span>
       )}
     </div>
   );
