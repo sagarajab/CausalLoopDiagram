@@ -44,8 +44,17 @@ export const Canvas: React.FC = React.memo(() => {
   const updateArcSign = useCLDStore(state => state.updateArcSign);
   const removeNode = useCLDStore(state => state.removeNode);
   const removeArc = useCLDStore(state => state.removeArc);
+  
+  // Canvas state from global store
+  const canvasPan = useCLDStore(state => state.canvasPan);
+  const canvasScale = useCLDStore(state => state.canvasScale);
+  const problemStatement = useCLDStore(state => state.problemStatement);
+  const setCanvasPan = useCLDStore(state => state.setCanvasPan);
+  const setCanvasScale = useCLDStore(state => state.setCanvasScale);
+  const setProblemStatement = useCLDStore(state => state.setProblemStatement);
+  const resetCanvasView = useCLDStore(state => state.resetCanvasView);
 
-  // Canvas interaction hook
+  // Canvas interaction hook with global state
   const {
     canvasState,
     interactionState,
@@ -58,14 +67,15 @@ export const Canvas: React.FC = React.memo(() => {
     setScaleCentered,
     resetView,
     screenToCanvas,
-  } = useCanvasInteraction();
+  } = useCanvasInteraction(canvasPan, canvasScale, setCanvasPan, setCanvasScale);
+  
+
 
   // Local state
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [arcDrag, setArcDrag] = useState<{ arcId: string, curvature: number } | null>(null);
   const [arcError, setArcError] = useState<string | null>(null);
-  const [problemStatement, setProblemStatement] = useState('Describe the problem here...');
   const [highlightedLoopId, setHighlightedLoopId] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [arrowDrawMouse, setArrowDrawMouse] = useState<{ x: number; y: number } | null>(null);
@@ -140,7 +150,7 @@ export const Canvas: React.FC = React.memo(() => {
 
   // Memoized event handlers to prevent unnecessary re-renders
   const handleNodeMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
-    addLog(`Node mouse down: ${nodeId}, button: ${e.button}, right mouse pressed: ${false}`, 'debug');
+    addLog(`Node mouse down: ${nodeId}, button: ${e.button}, arrowDrawMode: ${arrowDrawMode}, arrowFromNodeId: ${arrowFromNodeId}`, 'debug');
     if (arrowDrawMode && e.button === 0) { // Left click while in arrow draw mode
       if (!arrowFromNodeId) {
         setArrowFromNodeId(nodeId); // Select FROM node
@@ -163,9 +173,10 @@ export const Canvas: React.FC = React.memo(() => {
     }
     if (e.button === 2) { // Right mouse button
       addLog(`Right mouse button detected on node: ${nodeId}`, 'info');
-      // Arc creation logic
+      // Don't stop propagation - let the global handler enter arrow draw mode
+      // The old arc creation logic is handled by handleNodeRightClick if needed
       handleNodeRightClick(nodeId);
-      e.stopPropagation();
+      // Don't call e.stopPropagation() - let the event bubble up to global handler
       return;
     }
     // Left click - start drag only
@@ -190,11 +201,14 @@ export const Canvas: React.FC = React.memo(() => {
     const x = (e.clientX - rect.left - canvasState.pan.x) / canvasState.scale;
     const y = (e.clientY - rect.top - canvasState.pan.y) / canvasState.scale;
     
-    // Update arrow draw mouse position (debounced)
-    if (arrowDrawMode && pendingArcStart.current) {
+    // Update arrow draw mouse position (debounced) - only for arrow draw mode
+    console.log('Mouse move - checking arrow draw conditions:', { arrowDrawMode, arrowFromNodeId, arrowDrawMouse: !!arrowDrawMouse });
+    if (arrowDrawMode && arrowFromNodeId) {
       setArrowDrawMouse({ x, y });
+      console.log('Updating arrow draw mouse position:', { x, y, arrowDrawMode, arrowFromNodeId });
     } else if (arrowDrawMouse) {
       setArrowDrawMouse(null);
+      console.log('Clearing arrow draw mouse position');
     }
     
     if (draggingNodeId && dragStart.current) {
@@ -211,7 +225,7 @@ export const Canvas: React.FC = React.memo(() => {
         moveNode(draggingNodeId, newX, newY);
       }
     }
-  }, [canvasRef, canvasState.pan.x, canvasState.pan.y, canvasState.scale, draggingNodeId, isDragging, moveNode, arrowDrawMode, pendingArcStart]);
+  }, [canvasRef, canvasState.pan.x, canvasState.pan.y, canvasState.scale, draggingNodeId, isDragging, moveNode, arrowDrawMode, arrowFromNodeId, arrowDrawMouse]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     if (draggingNodeId) {
@@ -397,7 +411,7 @@ export const Canvas: React.FC = React.memo(() => {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      addLog(`Global mouse down: button ${e.button}`, 'debug');
+      console.log('Global mousedown:', e.button, e.target);
       if (e.button === 2) { // Right mouse button
         setArrowDrawMode(true);
         setArrowFromNodeId(null);
@@ -407,10 +421,10 @@ export const Canvas: React.FC = React.memo(() => {
     };
 
     const handleMouseUp = (e: MouseEvent) => {
-      addLog(`Global mouse up: button ${e.button}`, 'debug');
       if (e.button === 2) { // Right mouse button
         setArrowDrawMode(false);
         setArrowFromNodeId(null);
+        setArrowDrawMouse(null); // Clear arrow draw mouse position
         console.log('EXIT arrow draw mode (right mouse up)');
         addLog('EXIT arrow draw mode (right mouse up)', 'info');
       }
@@ -450,15 +464,15 @@ export const Canvas: React.FC = React.memo(() => {
       }
     };
 
-    const handleContextMenu = (e: MouseEvent) => {
-      console.log('Global right-click detected:', e.target);
-      // Don't prevent context menu globally - let individual elements handle it
+    const preventContextMenu = (e: MouseEvent) => {
+      console.log('Global contextmenu event prevented:', e.target);
+      e.preventDefault();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('keydown', handleDelete);
-    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('contextmenu', preventContextMenu);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
     
@@ -466,45 +480,13 @@ export const Canvas: React.FC = React.memo(() => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('keydown', handleDelete);
-      window.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [selection.nodeId, selection.arcId, removeNode, removeArc]);
-
-  useEffect(() => {
-    // Prevent context menu globally
-    const preventContextMenu = (e: MouseEvent) => {
-      console.log('Global contextmenu event prevented:', e.target);
-      e.preventDefault();
-    };
-    window.addEventListener('contextmenu', preventContextMenu);
-
-    const handleMouseDown = (e: MouseEvent) => {
-      console.log('Global mousedown:', e.button, e.target);
-      if (e.button === 2) { // Right mouse button
-        setArrowDrawMode(true);
-        setArrowFromNodeId(null);
-        console.log('ENTER arrow draw mode (right mouse down)');
-        addLog('ENTER arrow draw mode (right mouse down)', 'info');
-      }
-    };
-    const handleMouseUp = (e: MouseEvent) => {
-      if (e.button === 2) { // Right mouse button
-        setArrowDrawMode(false);
-        setArrowFromNodeId(null);
-        console.log('EXIT arrow draw mode (right mouse up)');
-        addLog('EXIT arrow draw mode (right mouse up)', 'info');
-      }
-    };
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
       window.removeEventListener('contextmenu', preventContextMenu);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [selection.nodeId, selection.arcId, removeNode, removeArc, setArrowDrawMode, setArrowFromNodeId, setArrowDrawMouse]);
+
+
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement | SVGGElement>) => {
     if (e.target === e.currentTarget) {
@@ -516,6 +498,7 @@ export const Canvas: React.FC = React.memo(() => {
       setEditingNodeId(null); // Exit node edit mode
       setArrowDrawMode(false); // Reset arrow draw mode
       setArrowFromNodeId(null); // Reset FROM node
+      setArrowDrawMouse(null); // Clear arrow draw mouse position
       addLog('Canvas clicked: Reset to Default State', 'info');
     }
   }, [selectNode, selectArc]);
@@ -533,6 +516,7 @@ export const Canvas: React.FC = React.memo(() => {
         isArrowDrawTo={false}
         scale={canvasState.scale}
         devMode={devMode}
+        isArrowDrawMode={arrowDrawMode}
         onMouseDown={handleNodeMouseDown}
         onMouseEnter={(nodeId) => setInteractionState(prev => ({ ...prev, hoveredNodeId: nodeId }))}
         onMouseLeave={() => setInteractionState(prev => ({ ...prev, hoveredNodeId: null }))}
@@ -566,6 +550,7 @@ export const Canvas: React.FC = React.memo(() => {
           highlightedLoopType={highlightedLoop?.type || '?'}
           scale={canvasState.scale}
           arcDrag={arcDrag}
+          isArrowDrawMode={arrowDrawMode}
           onMouseEnter={(arcId) => setInteractionState(prev => ({ ...prev, hoveredArcId: arcId }))}
           onMouseLeave={() => setInteractionState(prev => ({ ...prev, hoveredArcId: null }))}
           onMouseDown={handleArcMouseDown}
@@ -651,16 +636,27 @@ export const Canvas: React.FC = React.memo(() => {
             transform={`translate(${canvasState.pan.x}, ${canvasState.pan.y}) scale(${canvasState.scale})`}
             // Remove onMouseDown from <g>
           >
-            {/* Guideline for arc creation */}
-            {pendingArcStart.current && (() => {
-                const from = getNode(pendingArcStart.current);
-                if (!from) return null;
+
+            {/* Guideline for arc creation - only show in arrow draw mode */}
+            {(() => {
+              if (arrowDrawMode && arrowFromNodeId) {
+                const from = getNode(arrowFromNodeId);
+                if (!from) {
+                  return null;
+                }
+                
+                // Use non-debounced mouse position for responsive guideline
+                const mousePos = arrowDrawMouse || debouncedArrowDrawMouse;
+                if (!mousePos) {
+                  return null;
+                }
+                
                 return (
                   <line
                     x1={from.x}
                     y1={from.y}
-                    x2={debouncedArrowDrawMouse?.x || from.x}
-                    y2={debouncedArrowDrawMouse?.y || from.y}
+                    x2={mousePos.x}
+                    y2={mousePos.y}
                     stroke="#43a047"
                     strokeWidth={2}
                     strokeDasharray="6 6"
@@ -668,7 +664,9 @@ export const Canvas: React.FC = React.memo(() => {
                     pointerEvents="none"
                   />
                 );
-              })()}
+              }
+              return null;
+            })()}
 
             {/* Render arcs */}
             {renderedArcs}
@@ -687,7 +685,7 @@ export const Canvas: React.FC = React.memo(() => {
         highlightedLoop={highlightedLoop || null}
         scale={canvasState.scale}
         setScaleCentered={setScaleCentered}
-        resetView={resetView}
+        resetView={resetCanvasView}
         devMode={devMode}
         setDevMode={setDevMode}
       />

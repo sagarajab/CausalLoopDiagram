@@ -1,13 +1,32 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Point, CanvasState, InteractionState, CONSTANTS } from '../types';
 
-export function useCanvasInteraction() {
-  // Canvas state
-  const [canvasState, setCanvasState] = useState<CanvasState>({
+export function useCanvasInteraction(
+  externalPan?: { x: number; y: number },
+  externalScale?: number,
+  setExternalPan?: (pan: { x: number; y: number }) => void,
+  setExternalScale?: (scale: number) => void
+) {
+  // Canvas state - use external state if provided, otherwise use local state
+  const [localCanvasState, setLocalCanvasState] = useState<CanvasState>({
     pan: { x: 0, y: 0 },
     scale: 1,
     isPanning: false,
   });
+  
+  const canvasState = externalPan && externalScale ? {
+    pan: externalPan,
+    scale: externalScale,
+    isPanning: localCanvasState.isPanning,
+  } : localCanvasState;
+  
+  const setCanvasState = externalPan && externalScale ? 
+    (updater: CanvasState | ((prev: CanvasState) => CanvasState)) => {
+      const newState = typeof updater === 'function' ? updater(canvasState) : updater;
+      if (setExternalPan) setExternalPan(newState.pan);
+      if (setExternalScale) setExternalScale(newState.scale);
+      setLocalCanvasState(prev => ({ ...prev, isPanning: newState.isPanning }));
+    } : setLocalCanvasState;
 
   // Interaction state
   const [interactionState, setInteractionState] = useState<InteractionState>({
@@ -20,6 +39,10 @@ export function useCanvasInteraction() {
   // Refs
   const canvasRef = useRef<SVGSVGElement>(null);
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  
+  // Store current state in refs to avoid stale closures
+  const currentStateRef = useRef(canvasState);
+  currentStateRef.current = canvasState;
 
   // Pan handlers
   const handlePanMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
@@ -28,30 +51,30 @@ export function useCanvasInteraction() {
       panStart.current = {
         x: e.clientX,
         y: e.clientY,
-        panX: canvasState.pan.x,
-        panY: canvasState.pan.y,
+        panX: currentStateRef.current.pan.x,
+        panY: currentStateRef.current.pan.y,
       };
       e.preventDefault();
     }
-  }, [canvasState.pan]);
+  }, [setCanvasState]);
 
   const handlePanMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if (canvasState.isPanning && panStart.current) {
-      const dx = (e.clientX - panStart.current.x) / canvasState.scale;
-      const dy = (e.clientY - panStart.current.y) / canvasState.scale;
+    if (currentStateRef.current.isPanning && panStart.current) {
+      const dx = (e.clientX - panStart.current.x) / currentStateRef.current.scale;
+      const dy = (e.clientY - panStart.current.y) / currentStateRef.current.scale;
       setCanvasState(prev => ({
         ...prev,
         pan: { x: panStart.current!.panX + dx, y: panStart.current!.panY + dy }
       }));
     }
-  }, [canvasState.isPanning, canvasState.scale]);
+  }, [setCanvasState]);
 
   const handlePanMouseUp = useCallback((e: React.MouseEvent) => {
-    if (canvasState.isPanning) {
+    if (currentStateRef.current.isPanning) {
       setCanvasState(prev => ({ ...prev, isPanning: false }));
       panStart.current = null;
     }
-  }, [canvasState.isPanning]);
+  }, [setCanvasState]);
 
   // Zoom handler
   const handleWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
@@ -66,15 +89,15 @@ export function useCanvasInteraction() {
     const cursorpt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
     
     // Compute new scale
-    let newScale = canvasState.scale * (e.deltaY < 0 ? 1.1 : 0.9);
+    let newScale = currentStateRef.current.scale * (e.deltaY < 0 ? 1.1 : 0.9);
     newScale = Math.max(CONSTANTS.MIN_SCALE, Math.min(CONSTANTS.MAX_SCALE, newScale));
     
     // Adjust pan so zoom is centered on mouse
-    const dx = cursorpt.x - canvasState.pan.x;
-    const dy = cursorpt.y - canvasState.pan.y;
+    const dx = cursorpt.x - currentStateRef.current.pan.x;
+    const dy = cursorpt.y - currentStateRef.current.pan.y;
     const newPan = {
-      x: cursorpt.x - dx * (newScale / canvasState.scale),
-      y: cursorpt.y - dy * (newScale / canvasState.scale),
+      x: cursorpt.x - dx * (newScale / currentStateRef.current.scale),
+      y: cursorpt.y - dy * (newScale / currentStateRef.current.scale),
     };
     
     setCanvasState(prev => ({
@@ -82,7 +105,7 @@ export function useCanvasInteraction() {
       scale: newScale,
       pan: newPan,
     }));
-  }, [canvasState.scale, canvasState.pan]);
+  }, [setCanvasState]);
 
   // Zoom controls
   const setScaleCentered = useCallback((newScale: number) => {
@@ -100,11 +123,11 @@ export function useCanvasInteraction() {
     const center = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
     
     // Adjust pan so zoom is centered on canvas center
-    const dx = center.x - canvasState.pan.x;
-    const dy = center.y - canvasState.pan.y;
+    const dx = center.x - currentStateRef.current.pan.x;
+    const dy = center.y - currentStateRef.current.pan.y;
     const newPan = {
-      x: center.x - dx * (newScale / canvasState.scale),
-      y: center.y - dy * (newScale / canvasState.scale),
+      x: center.x - dx * (newScale / currentStateRef.current.scale),
+      y: center.y - dy * (newScale / currentStateRef.current.scale),
     };
     
     setCanvasState(prev => ({
@@ -112,7 +135,7 @@ export function useCanvasInteraction() {
       scale: newScale,
       pan: newPan,
     }));
-  }, [canvasState.scale, canvasState.pan]);
+  }, [setCanvasState]);
 
   const resetView = useCallback(() => {
     setCanvasState({
@@ -120,7 +143,7 @@ export function useCanvasInteraction() {
       scale: 1,
       isPanning: false,
     });
-  }, []);
+  }, [setCanvasState]);
 
   // Context menu prevention
   useEffect(() => {
@@ -145,21 +168,21 @@ export function useCanvasInteraction() {
     const canvasPt = pt.matrixTransform(canvasRef.current.getScreenCTM()?.inverse());
     
     return {
-      x: (canvasPt.x - canvasState.pan.x) / canvasState.scale,
-      y: (canvasPt.y - canvasState.pan.y) / canvasState.scale,
+      x: (canvasPt.x - currentStateRef.current.pan.x) / currentStateRef.current.scale,
+      y: (canvasPt.y - currentStateRef.current.pan.y) / currentStateRef.current.scale,
     };
-  }, [canvasState.pan, canvasState.scale]);
+  }, []);
 
   const canvasToScreen = useCallback((canvasX: number, canvasY: number): Point => {
     if (!canvasRef.current) return { x: 0, y: 0 };
     
     const pt = canvasRef.current.createSVGPoint();
-    pt.x = canvasX * canvasState.scale + canvasState.pan.x;
-    pt.y = canvasY * canvasState.scale + canvasState.pan.y;
+    pt.x = canvasX * currentStateRef.current.scale + currentStateRef.current.pan.x;
+    pt.y = canvasY * currentStateRef.current.scale + currentStateRef.current.pan.y;
     const screenPt = pt.matrixTransform(canvasRef.current.getScreenCTM() || undefined);
     
     return { x: screenPt.x, y: screenPt.y };
-  }, [canvasState.pan, canvasState.scale]);
+  }, []);
 
   return {
     // State

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { NodeType } from '../../types';
 import { addLog } from './DevPanel';
 import { estimateLabelSize, wrapTextToWidth } from '../../utils/geometry';
+import { useCLDStore } from '../../state/cldStore';
 
 interface NodeProps {
   node: NodeType;
@@ -12,6 +13,7 @@ interface NodeProps {
   isArrowDrawTo: boolean;
   scale: number;
   devMode?: boolean;
+  isArrowDrawMode?: boolean;
   onMouseDown: (e: React.MouseEvent, nodeId: string) => void;
   onMouseEnter: (nodeId: string) => void;
   onMouseLeave: () => void;
@@ -28,6 +30,7 @@ export const Node: React.FC<NodeProps> = React.memo(({
   isArrowDrawTo,
   scale,
   devMode = false,
+  isArrowDrawMode = false,
   onMouseDown,
   onMouseEnter,
   onMouseLeave,
@@ -44,7 +47,7 @@ export const Node: React.FC<NodeProps> = React.memo(({
   const [editingLabel, setEditingLabel] = useState(node.label);
   const [caretPos, setCaretPos] = useState(0);
   const [showCaret, setShowCaret] = useState(true);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLDivElement>(null);
 
   // Caret blink effect
   useEffect(() => {
@@ -59,23 +62,39 @@ export const Node: React.FC<NodeProps> = React.memo(({
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
-      inputRef.current.select();
+      // Select all text in contentEditable div
+      const range = document.createRange();
+      range.selectNodeContents(inputRef.current);
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
     }
   }, [isEditing]);
 
+  // Get global font settings
+  const nodeFontFamily = useCLDStore(state => state.nodeFontFamily);
+  const nodeFontSize = useCLDStore(state => state.nodeFontSize);
+
   // Memoized label size calculation to prevent recalculation
   const labelSize = useMemo(() => {
-    const displayFontSize = 16;
     const maxLabelWidth = 150;
-    return estimateLabelSize(node.label, displayFontSize, maxLabelWidth);
-  }, [node.label]);
+    return estimateLabelSize(node.label, nodeFontSize, maxLabelWidth);
+  }, [node.label, nodeFontSize]);
 
   // Memoized edit mode label size (same constraints as display)
   const editLabelSize = useMemo(() => {
-    const editFontSize = 16;
     const maxLabelWidth = 150; // Same as display mode
-    return estimateLabelSize(editingLabel, editFontSize, maxLabelWidth);
-  }, [editingLabel]);
+    const baseSize = estimateLabelSize(editingLabel, nodeFontSize, maxLabelWidth);
+    
+    // Add minimal extra height for better text rendering
+    return {
+      ...baseSize,
+      height: baseSize.height + 8, // Add 8px extra height
+      width: baseSize.width + 4    // Add 4px extra width
+    };
+  }, [editingLabel, nodeFontSize]);
 
 
 
@@ -87,19 +106,39 @@ export const Node: React.FC<NodeProps> = React.memo(({
     return { padding, rx, ry };
   }, [labelSize.width, labelSize.height]);
 
-  // Memoized wrapped text lines
+  // Memoized wrapped text lines - handle both word wrapping and explicit line breaks
   const wrappedTextLines = useMemo(() => {
-    const displayFontSize = 16;
     const maxLabelWidth = 150;
-    return wrapTextToWidth(node.label, maxLabelWidth, displayFontSize);
-  }, [node.label]);
+    
+    // Split by explicit line breaks first
+    const paragraphs = node.label.split('\n');
+    const allLines: string[] = [];
+    
+    for (const paragraph of paragraphs) {
+      // Apply word wrapping to each paragraph
+      const wrappedParagraph = wrapTextToWidth(paragraph, maxLabelWidth, nodeFontSize);
+      allLines.push(...wrappedParagraph);
+    }
+    
+    return allLines;
+  }, [node.label, nodeFontSize]);
 
-  // Memoized wrapped text lines for edit mode
+  // Memoized wrapped text lines for edit mode - handle both word wrapping and explicit line breaks
   const editWrappedTextLines = useMemo(() => {
-    const editFontSize = 16;
     const maxLabelWidth = 150;
-    return wrapTextToWidth(editingLabel, maxLabelWidth, editFontSize);
-  }, [editingLabel]);
+    
+    // Split by explicit line breaks first
+    const paragraphs = editingLabel.split('\n');
+    const allLines: string[] = [];
+    
+    for (const paragraph of paragraphs) {
+      // Apply word wrapping to each paragraph
+      const wrappedParagraph = wrapTextToWidth(paragraph, maxLabelWidth, nodeFontSize);
+      allLines.push(...wrappedParagraph);
+    }
+    
+    return allLines;
+  }, [editingLabel, nodeFontSize]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     setIsEditing(true);
@@ -110,7 +149,14 @@ export const Node: React.FC<NodeProps> = React.memo(({
     setTimeout(() => {
       if (inputRef.current) {
         inputRef.current.focus();
-        inputRef.current.select();
+        // Select all text in contentEditable div
+        const range = document.createRange();
+        range.selectNodeContents(inputRef.current);
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
       }
     }, 10);
   };
@@ -128,8 +174,12 @@ export const Node: React.FC<NodeProps> = React.memo(({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
+      // Enter without Shift: save and exit edit mode
       handleLabelSave();
       e.preventDefault();
+    } else if (e.key === 'Enter' && e.shiftKey) {
+      // Shift+Enter: insert new line (let default behavior handle it)
+      e.stopPropagation();
     } else if (e.key === 'Escape') {
       handleLabelCancel();
       e.preventDefault();
@@ -177,9 +227,12 @@ export const Node: React.FC<NodeProps> = React.memo(({
       onDoubleClick={handleDoubleClick}
       onContextMenu={(e) => {
         addLog(`Node ${node.id} context menu prevented`, 'debug');
-        e.preventDefault();
+        // Only prevent context menu if we're editing, otherwise allow it to bubble up for arrow draw mode
+        if (isEditing) {
+          e.preventDefault();
+        }
       }}
-      style={{ cursor: isEditing ? 'text' : 'pointer' }}
+      style={{ cursor: isEditing ? 'text' : (isArrowDrawMode ? 'crosshair' : 'pointer') }}
       pointerEvents="all"
     >
       {/* Transparent blue border for selected node */}
@@ -242,58 +295,81 @@ export const Node: React.FC<NodeProps> = React.memo(({
       {!isEditing ? (
         <text
           x={node.x}
-          y={node.y - labelSize.height / 2 + 16 * 1.2 / 2}
+          y={node.y - labelSize.height / 2 + nodeFontSize * 1.2 / 2}
           textAnchor="middle"
           dominantBaseline="middle"
-          fontSize={16}
+          fontSize={nodeFontSize}
           fill={node.color}
           fontStyle="normal"
           fontWeight={isArcFromNode || isSelected || isHovered ? 'bold' : 'normal'}
           filter="none"
-          style={nodeStyle}
+          style={{ ...nodeStyle, fontFamily: nodeFontFamily }}
         >
           {wrappedTextLines.map((line, i) => (
-            <tspan key={i} x={node.x} dy={i === 0 ? 0 : 16 * 1.2}>
+            <tspan key={i} x={node.x} dy={i === 0 ? 0 : nodeFontSize * 1.2}>
               {line}
             </tspan>
           ))}
         </text>
             ) : (
-                  <foreignObject
-            x={node.x - editLabelSize.width / 2}
-            y={node.y - editLabelSize.height / 2}
-            width={editLabelSize.width}
-            height={Math.max(editLabelSize.height + 24, 60)}
-          >
-                        <textarea
-              ref={inputRef}
-              className="node-edit-textarea"
-              value={editingLabel}
-              onChange={e => setEditingLabel(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={handleLabelSave}
-              style={{
-                width: '100%',
-                minHeight: '100%',
-                border: 'none',
-                outline: 'none',
-                background: 'transparent',
-                fontSize: 16,
-                fontFamily: 'inherit',
-                textAlign: 'center',
-                color: node.color,
-                fontWeight: 'normal',
-                padding: '6px 0',
-                boxSizing: 'border-box',
-                lineHeight: '1.4',
-                whiteSpace: 'pre-wrap',
-                caretColor: node.color,
-                overflow: 'visible',
-                resize: 'none'
-              }}
-            />
-        </foreignObject>
-      )}
+              <>
+                {/* Elegant background highlight for edit mode */}
+                <ellipse
+                  cx={node.x}
+                  cy={node.y}
+                  rx={editLabelSize.width / 2 + 18}
+                  ry={editLabelSize.height / 2 + 18}
+                  fill="#f8f9fa"
+                  stroke="#dee2e6"
+                  strokeWidth={1.5}
+                  opacity={0.9}
+                  style={{ 
+                    filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.08))',
+                    transition: 'all 0.2s ease'
+                  }}
+                />
+                
+                <foreignObject
+                  x={node.x - editLabelSize.width / 2}
+                  y={node.y - editLabelSize.height / 2 - 2}
+                  width={editLabelSize.width}
+                  height={Math.max(editLabelSize.height + 20, 60)}
+                >
+                  <div
+                    ref={inputRef}
+                    className="node-edit-textarea"
+                    contentEditable
+                    suppressContentEditableWarning
+                    onInput={e => setEditingLabel(e.currentTarget.textContent?.replace(/\n/g, ' ') || '')}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleLabelSave}
+                    style={{
+                      width: '100%',
+                      minHeight: '100%',
+                      border: 'none',
+                      outline: 'none',
+                      background: 'transparent',
+                      fontSize: `${nodeFontSize}px`,
+                      fontFamily: nodeFontFamily,
+                      textAlign: 'center',
+                      color: node.color,
+                      fontWeight: 'normal',
+                      padding: '4px 2px',
+                      boxSizing: 'border-box',
+                      lineHeight: '1.3',
+                      whiteSpace: 'pre',
+                      caretColor: node.color,
+                      overflow: 'visible',
+                      borderRadius: '3px',
+                      transition: 'all 0.15s ease',
+                      wordBreak: 'break-word'
+                    }}
+                  >
+                    {editWrappedTextLines.join('\n')}
+                  </div>
+                </foreignObject>
+              </>
+            )}
       </g>
     </>
   );

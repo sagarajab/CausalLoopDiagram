@@ -11,8 +11,22 @@ export type CLDState = {
   arcCounter: number;
   defaultNodeColor: string;
   defaultArcColor: string;
+  // Font settings
+  nodeFontFamily: string;
+  nodeFontSize: number;
+  // Canvas state for persistence
+  canvasPan: { x: number; y: number };
+  canvasScale: number;
+  problemStatement: string;
+  // Actions
   setDefaultNodeColor: (color: string) => void;
   setDefaultArcColor: (color: string) => void;
+  setNodeFontFamily: (fontFamily: string) => void;
+  setNodeFontSize: (fontSize: number) => void;
+  setCanvasPan: (pan: { x: number; y: number }) => void;
+  setCanvasScale: (scale: number) => void;
+  setProblemStatement: (statement: string) => void;
+  resetCanvasView: () => void;
   addNode: (x: number, y: number) => void;
   moveNode: (id: string, x: number, y: number) => void;
   moveNodeNoHistory: (id: string, x: number, y: number) => void;
@@ -48,9 +62,22 @@ export const useCLDStore: UseBoundStore<StoreApi<CLDState>> = create<CLDState>(
     arcCounter: 1,
     defaultNodeColor: '#222',
     defaultArcColor: '#888',
+    // Font settings
+    nodeFontFamily: 'Arial',
+    nodeFontSize: 16,
+    // Canvas state for persistence
+    canvasPan: { x: 0, y: 0 },
+    canvasScale: 1,
+    problemStatement: 'Describe the problem here...',
     
     setDefaultNodeColor: (color: string) => set({ defaultNodeColor: color }),
     setDefaultArcColor: (color: string) => set({ defaultArcColor: color }),
+    setNodeFontFamily: (fontFamily: string) => set({ nodeFontFamily: fontFamily }),
+    setNodeFontSize: (fontSize: number) => set({ nodeFontSize: fontSize }),
+    setCanvasPan: (pan: { x: number; y: number }) => set({ canvasPan: pan }),
+    setCanvasScale: (scale: number) => set({ canvasScale: scale }),
+    setProblemStatement: (statement: string) => set({ problemStatement: statement }),
+    resetCanvasView: () => set({ canvasPan: { x: 0, y: 0 }, canvasScale: 1 }),
     
     addNode: (x, y) => {
       const id = get().nodeCounter.toString();
@@ -184,6 +211,11 @@ export const useCLDStore: UseBoundStore<StoreApi<CLDState>> = create<CLDState>(
         future: [],
         nodeCounter: 1,
         arcCounter: 1,
+        nodeFontFamily: 'Arial',
+        nodeFontSize: 16,
+        canvasPan: { x: 0, y: 0 },
+        canvasScale: 1,
+        problemStatement: 'Describe the problem here...',
       });
     },
   })

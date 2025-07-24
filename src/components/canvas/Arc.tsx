@@ -12,6 +12,7 @@ interface ArcProps {
   highlightedLoopType: string;
   scale: number;
   arcDrag: { arcId: string, curvature: number } | null;
+  isArrowDrawMode?: boolean;
   onMouseEnter: (arcId: string) => void;
   onMouseLeave: () => void;
   onMouseDown: (e: React.MouseEvent, arcId: string) => void;
@@ -30,6 +31,7 @@ export const Arc: React.FC<ArcProps> = React.memo(({
   highlightedLoopType,
   scale,
   arcDrag,
+  isArrowDrawMode = false,
   onMouseEnter,
   onMouseLeave,
   onMouseDown,
@@ -359,7 +361,7 @@ export const Arc: React.FC<ArcProps> = React.memo(({
         strokeWidth={24}
         strokeOpacity={0}
         fill="none"
-        style={{ cursor: 'pointer', pointerEvents: 'stroke' }}
+        style={{ cursor: isArrowDrawMode ? 'crosshair' : 'pointer', pointerEvents: 'stroke' }}
         onMouseDown={e => { e.stopPropagation(); onMouseDown(e, arc.id); }}
       />
       {/* Visible arc with shadow if highlighted */}
@@ -372,7 +374,7 @@ export const Arc: React.FC<ArcProps> = React.memo(({
         style={{ 
           filter: shadowFilter, 
           transition: 'filter 0.2s', 
-          cursor: 'pointer', 
+          cursor: isArrowDrawMode ? 'crosshair' : 'pointer', 
           pointerEvents: 'none' 
         }}
       />

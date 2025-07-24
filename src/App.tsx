@@ -1,8 +1,21 @@
 import React, { useState, useRef } from 'react';
 import { Canvas } from './components/canvas/Canvas';
 import { useCLDStore } from './state/cldStore';
-import { LuUndo2 , LuRedo2 , LuFolderOpen , LuSave, LuPalette, LuChevronDown, LuSpline, LuEraser, LuLayout, LuBarChart, LuMenu } from 'react-icons/lu';
-import { LuType  } from 'react-icons/lu';
+import { 
+  LuUndo2, 
+  LuRedo2, 
+  LuFolderOpen, 
+  LuSave, 
+  LuChevronDown, 
+  LuSpline, 
+  LuEraser, 
+  LuLayout, 
+  LuBarChart, 
+  LuMenu,
+  LuType,
+  LuDiamond,
+  LuAlignLeft
+} from 'react-icons/lu';
 
 // Responsive breakpoints
 const BREAKPOINTS = {
@@ -233,13 +246,20 @@ const App: React.FC = () => {
   const arcs = useCLDStore(state => state.arcs);
   const defaultNodeColor = useCLDStore(state => state.defaultNodeColor);
   const defaultArcColor = useCLDStore(state => state.defaultArcColor);
+  const nodeFontFamily = useCLDStore(state => state.nodeFontFamily);
+  const nodeFontSize = useCLDStore(state => state.nodeFontSize);
   const setDefaultNodeColor = useCLDStore(state => state.setDefaultNodeColor);
   const setDefaultArcColor = useCLDStore(state => state.setDefaultArcColor);
+  const setNodeFontFamily = useCLDStore(state => state.setNodeFontFamily);
+  const setNodeFontSize = useCLDStore(state => state.setNodeFontSize);
   const [colorPickerOpen, setColorPickerOpen] = useState<'selected' | 'node' | 'arc' | null>(null);
   const [nodeMenuOpen, setNodeMenuOpen] = useState(false);
   const [arcMenuOpen, setArcMenuOpen] = useState(false);
+  const [fontFamilyMenuOpen, setFontFamilyMenuOpen] = useState(false);
+  const [fontSizeMenuOpen, setFontSizeMenuOpen] = useState(false);
   const nodeBtnRef = React.useRef<HTMLDivElement>(null);
   const arcBtnRef = React.useRef<HTMLDivElement>(null);
+  const fontBtnRef = React.useRef<HTMLDivElement>(null);
   const arcDragStart = React.useRef<null | { arcId: string, mx: number, my: number, nx: number, ny: number, sign: number }>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -259,6 +279,11 @@ const App: React.FC = () => {
       arcs,
       defaultNodeColor,
       defaultArcColor,
+      nodeFontFamily,
+      nodeFontSize,
+      canvasPan: useCLDStore.getState().canvasPan,
+      canvasScale: useCLDStore.getState().canvasScale,
+      problemStatement: useCLDStore.getState().problemStatement,
     };
     let exportName = filename.trim() || 'Untitled';
     if (!exportName.toLowerCase().endsWith('.cld')) {
@@ -314,6 +339,11 @@ const App: React.FC = () => {
           arcCounter: data.arcs.reduce((max: number, a: {id: string}) => Math.max(max, Number(a.id)), 0) + 1,
           defaultNodeColor: data.defaultNodeColor || '#222',
           defaultArcColor: data.defaultArcColor || '#888',
+          nodeFontFamily: data.nodeFontFamily || 'Arial',
+          nodeFontSize: data.nodeFontSize || 16,
+          canvasPan: data.canvasPan || { x: 0, y: 0 },
+          canvasScale: data.canvasScale || 1,
+          problemStatement: data.problemStatement || 'Describe the problem here...',
         }));
         // Set filename to file name without extension
         const baseName = file.name.replace(/\.[^/.]+$/, '');
@@ -362,6 +392,18 @@ const App: React.FC = () => {
     '#FF0000', '#FF9900', '#FFFF00', '#00FF00', '#00B0F0', '#0070C0', '#7030A0',
     '#F4B183', '#C6E0B4', '#BDD7EE', '#D9D9D9', '#A9D08E', '#FFD966', '#ED7D31',
   ];
+
+  // Font options for node labels
+  const FONT_OPTIONS = [
+    { name: 'Arial', value: 'Arial' },
+    { name: 'Helvetica', value: 'Helvetica' },
+    { name: 'Times New Roman', value: 'Times New Roman' },
+    { name: 'Georgia', value: 'Georgia' },
+    { name: 'Verdana', value: 'Verdana' },
+    { name: 'Courier New', value: 'Courier New' }
+  ];
+
+  const FONT_SIZE_OPTIONS = [12, 14, 16, 18, 20, 24, 28, 32];
 
   return (
     <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, Segoe UI, Arial, sans-serif' }}>
@@ -501,12 +543,14 @@ const App: React.FC = () => {
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
-        padding: isMobile ? '4px 8px' : '8px 16px', 
-        background: '#fff', 
+        padding: isMobile ? '4px 8px' : '6px 16px', 
+        background: '#ffffff', 
+        borderBottom: '1px solid #e2e8f0',
         position: 'relative', 
         fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
         flexWrap: 'wrap',
-        gap: isMobile ? 4 : 8
+        gap: isMobile ? 4 : 8,
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
       }}>
         {/* Menu bar content: icon group left, tab buttons right */}
         <div style={{ display: 'flex', alignItems: 'center', flex: 1, flexWrap: 'wrap', gap: isMobile ? 8 : 12 }}>
@@ -701,16 +745,15 @@ const App: React.FC = () => {
                   if (selection.nodeId) e.currentTarget.style.background = '#f0f4fa';
                 }}
               >
-                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <LuType size={isMobile ? 18 : 22} strokeWidth={2} color="#333" style={{ display: 'block', marginBottom: 0 }} />
+                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <LuDiamond size={isMobile ? 18 : 20} strokeWidth={2} color="#475569" style={{ display: 'block' }} />
                   <div style={{
-                    width: 20,
-                    height: 4,
+                    width: 16,
+                    height: 3,
                     background: defaultNodeColor,
-                    borderRadius: 2,
-                    marginTop: 2,
-                    marginBottom: 0,
+                    borderRadius: 1.5,
                     pointerEvents: 'none',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
                   }} />
                 </span>
               </button>
@@ -756,18 +799,19 @@ const App: React.FC = () => {
                 <div
                   style={{
                     position: 'absolute',
-                    top: 38,
+                    top: 44,
                     left: 0,
-                    background: '#fff',
-                    border: '1px solid #bbb',
-                    borderRadius: 8,
-                    padding: 10,
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 12,
+                    padding: 12,
                     zIndex: 2000,
-                    boxShadow: '0 2px 8px #0002',
-                    minWidth: 180,
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)',
+                    minWidth: 200,
                     display: 'grid',
                     gridTemplateColumns: 'repeat(7, 1fr)',
-                    gap: 6,
+                    gap: 8,
+                    backdropFilter: 'blur(8px)',
                   }}
                   onMouseLeave={() => setNodeMenuOpen(false)}
                 >
@@ -775,12 +819,14 @@ const App: React.FC = () => {
                     <button
                       key={color}
                       style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 4,
-                        border: color === defaultNodeColor ? '2px solid #1976d2' : '1px solid #bbb',
+                        width: 24,
+                        height: 24,
+                        borderRadius: 6,
+                        border: color === defaultNodeColor ? '2px solid #3b82f6' : '1px solid #e2e8f0',
                         background: color,
                         cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
                       }}
                       onClick={() => {
                         setDefaultNodeColor(color);
@@ -869,16 +915,15 @@ const App: React.FC = () => {
                   if (selection.arcId) e.currentTarget.style.background = '#f0f4fa';
                 }}
               >
-                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <LuSpline size={isMobile ? 18 : 22} color="#333" style={{ display: 'block', marginBottom: 0 }} />
+                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <LuSpline size={isMobile ? 18 : 20} color="#475569" style={{ display: 'block' }} />
                   <div style={{
-                    width: 22,
-                    height: 4,
+                    width: 18,
+                    height: 3,
                     background: defaultArcColor,
-                    borderRadius: 2,
-                    marginTop: 2,
-                    marginBottom: 0,
+                    borderRadius: 1.5,
                     pointerEvents: 'none',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
                   }} />
                 </span>
               </button>
@@ -924,18 +969,19 @@ const App: React.FC = () => {
                 <div
                   style={{
                     position: 'absolute',
-                    top: 38,
+                    top: 44,
                     left: 0,
-                    background: '#fff',
-                    border: '1px solid #bbb',
-                    borderRadius: 8,
-                    padding: 10,
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 12,
+                    padding: 12,
                     zIndex: 2000,
-                    boxShadow: '0 2px 8px #0002',
-                    minWidth: 180,
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)',
+                    minWidth: 200,
                     display: 'grid',
                     gridTemplateColumns: 'repeat(7, 1fr)',
-                    gap: 6,
+                    gap: 8,
+                    backdropFilter: 'blur(8px)',
                   }}
                   onMouseLeave={() => setArcMenuOpen(false)}
                 >
@@ -943,12 +989,14 @@ const App: React.FC = () => {
                     <button
                       key={color}
                       style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 4,
-                        border: color === defaultArcColor ? '2px solid #1976d2' : '1px solid #bbb',
+                        width: 24,
+                        height: 24,
+                        borderRadius: 6,
+                        border: color === defaultArcColor ? '2px solid #3b82f6' : '1px solid #e2e8f0',
                         background: color,
                         cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
                       }}
                       onClick={() => {
                         setDefaultArcColor(color);
@@ -990,6 +1038,236 @@ const App: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Font tools group */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: isMobile ? 8 : 12,
+            flexWrap: 'wrap',
+            ...(isMobile && !mobileMenuOpen && { display: 'none' })
+          }}>
+            {/* Font Family */}
+            <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'row', alignItems: 'flex-end', verticalAlign: 'top' }} ref={fontBtnRef}>
+              <button
+                title="Font Family"
+                style={{
+                  ...menuBtnStyle,
+                  marginRight: 0,
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderTopRightRadius: 0,
+                  borderBottomRightRadius: 0,
+                  borderRight: 'none',
+                  paddingRight: 0,
+                  background: '#fff',
+                  width: 'auto',
+                  minWidth: 120,
+                  height: 40,
+                  transition: 'background 0.15s, box-shadow 0.15s',
+                }}
+                onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+                onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+                onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+                onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px', gap: 8 }}>
+                  <div style={{
+                    fontSize: 13,
+                    color: '#475569',
+                    fontFamily: nodeFontFamily,
+                    fontWeight: 500,
+                    letterSpacing: '0.025em'
+                  }}>
+                    {FONT_OPTIONS.find(f => f.value === nodeFontFamily)?.name || nodeFontFamily}
+                  </div>
+                </span>
+              </button>
+              <button
+                title="Select Font"
+                style={{
+                  ...menuBtnStyle,
+                  marginLeft: 0,
+                  borderTopLeftRadius: 0,
+                  borderBottomLeftRadius: 0,
+                  padding: '6px 8px',
+                  background: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  width: 32,
+                  height: 40,
+                  justifyContent: 'center',
+                  transition: 'background 0.15s, box-shadow 0.15s',
+                }}
+                onClick={() => setFontFamilyMenuOpen(open => !open)}
+                onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+                onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+                onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+                onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+              >
+                <LuChevronDown size={14} strokeWidth={2} color="#475569"/>
+              </button>
+              {/* Context menu for font family */}
+              {fontFamilyMenuOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 44,
+                    left: 0,
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 12,
+                    padding: 8,
+                    zIndex: 2000,
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)',
+                    minWidth: 160,
+                    maxHeight: 240,
+                    overflow: 'auto',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                  onMouseLeave={() => setFontFamilyMenuOpen(false)}
+                >
+                  {FONT_OPTIONS.map(font => (
+                    <button
+                      key={font.value}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: 'none',
+                        background: font.value === nodeFontFamily ? '#f1f5f9' : 'transparent',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontSize: 14,
+                        fontFamily: font.value,
+                        color: font.value === nodeFontFamily ? '#1e293b' : '#475569',
+                        fontWeight: font.value === nodeFontFamily ? '600' : '400',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onClick={() => {
+                        setNodeFontFamily(font.value);
+                        setFontFamilyMenuOpen(false);
+                      }}
+                    >
+                      {font.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Font Size */}
+            <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'row', alignItems: 'flex-end', verticalAlign: 'top' }}>
+              <button
+                title="Font Size"
+                style={{
+                  ...menuBtnStyle,
+                  marginRight: 0,
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderTopRightRadius: 0,
+                  borderBottomRightRadius: 0,
+                  borderRight: 'none',
+                  paddingRight: 0,
+                  background: '#fff',
+                  width: 'auto',
+                  minWidth: 60,
+                  height: 40,
+                  transition: 'background 0.15s, box-shadow 0.15s',
+                }}
+                onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+                onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+                onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+                onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px', gap: 8 }}>
+                  <div style={{
+                    fontSize: 13,
+                    color: '#475569',
+                    fontWeight: 500,
+                    fontFamily: 'Inter, sans-serif'
+                  }}>
+                    {nodeFontSize}
+                  </div>
+                </span>
+              </button>
+              <button
+                title="Select Font Size"
+                style={{
+                  ...menuBtnStyle,
+                  marginLeft: 0,
+                  borderTopLeftRadius: 0,
+                  borderBottomLeftRadius: 0,
+                  padding: '6px 8px',
+                  background: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  width: 32,
+                  height: 40,
+                  justifyContent: 'center',
+                  transition: 'background 0.15s, box-shadow 0.15s',
+                }}
+                onClick={() => setFontSizeMenuOpen(open => !open)}
+                onMouseOver={e => { e.currentTarget.style.background = '#f0f4fa'; e.currentTarget.style.boxShadow = '0 2px 8px #1976d222'; }}
+                onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+                onMouseDown={e => { e.currentTarget.style.background = '#e3eaf5'; }}
+                onMouseUp={e => { e.currentTarget.style.background = '#f0f4fa'; }}
+              >
+                <LuChevronDown size={14} strokeWidth={2} color="#475569"/>
+              </button>
+              {/* Context menu for font size */}
+              {fontSizeMenuOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 44,
+                    left: 0,
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 12,
+                    padding: 8,
+                    zIndex: 2000,
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)',
+                    minWidth: 90,
+                    maxHeight: 240,
+                    overflow: 'auto',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                  onMouseLeave={() => setFontSizeMenuOpen(false)}
+                >
+                  {FONT_SIZE_OPTIONS.map(size => (
+                    <button
+                      key={size}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: 'none',
+                        background: size === nodeFontSize ? '#f1f5f9' : 'transparent',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        color: size === nodeFontSize ? '#1e293b' : '#475569',
+                        fontWeight: size === nodeFontSize ? '600' : '400',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onClick={() => {
+                        setNodeFontSize(size);
+                        setFontSizeMenuOpen(false);
+                      }}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Spacer to push tab buttons right */}
           <div style={{ flex: 1 }} />
           {/* Canvas/Analysis tab buttons right-aligned */}
@@ -1067,17 +1345,44 @@ const App: React.FC = () => {
   );
 };
 
-// Menu button style
+// Modern menu button style
 const menuBtnStyle: React.CSSProperties = {
-  background: '#fff',
+  background: '#ffffff',
   border: 'none',
-  color: '#1976d2',
-  fontSize: 22,
-  // marginRight: 16, // Removed for flex gap
+  color: '#475569',
+  fontSize: 16,
   cursor: 'pointer',
   padding: 6,
-  borderRadius: 4,
-  transition: 'background 0.15s, box-shadow 0.15s, color 0.15s',
+  borderRadius: 6,
+  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+  minWidth: 36,
+  height: 36,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxShadow: 'none',
+  outline: 'none',
+  userSelect: 'none',
+};
+
+// Modern button hover effects
+const modernButtonHoverEffects = {
+  onMouseOver: (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.background = '#f8fafc';
+    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+  },
+  onMouseOut: (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.background = '#ffffff';
+    e.currentTarget.style.boxShadow = 'none';
+  },
+  onMouseDown: (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.background = '#f1f5f9';
+    e.currentTarget.style.transform = 'translateY(1px)';
+  },
+  onMouseUp: (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.background = '#f8fafc';
+    e.currentTarget.style.transform = 'translateY(0)';
+  }
 };
 
 export default App;

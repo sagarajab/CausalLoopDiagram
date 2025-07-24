@@ -18,3 +18,28 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Node edit textarea styling */
+.node-edit-textarea::selection {
+  background-color: rgba(33, 150, 243, 0.3);
+  color: inherit;
+}
+
+.node-edit-textarea::-moz-selection {
+  background-color: rgba(33, 150, 243, 0.3);
+  color: inherit;
+}
+
+.node-edit-textarea:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Ensure text is fully visible */
+.node-edit-textarea {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  vertical-align: middle !important;
+  min-height: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+}
